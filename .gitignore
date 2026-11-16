@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.local-server/
+.local-flash/
+.local-apk/
+logs/
+artifacts/
+*.log
+.DS_Store
+tools/live-games/.build/
+tools/live-games/.cache/

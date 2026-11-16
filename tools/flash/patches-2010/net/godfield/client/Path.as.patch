@@ -1,0 +1,65 @@
+--- a/net/godfield/client/Path.as
++++ b/net/godfield/client/Path.as
+@@ -1,17 +1,28 @@
+ package net.godfield.client
+ {
+    import net.godfield.Language;
++   import flash.display.LoaderInfo;
++   import net.godfield.client.main.Main;
+ 
+    public class Path
+    {
+ 
+-      private static const ROOT_DIR:String = "http://www.godfield.net/game/";
++      public static function get baseURL() : String
++      {
++         var parameters:Object = Main.instance.loaderInfo.parameters;
++         var base:String = parameters.serverURL ? String(parameters.serverURL) : "http://127.0.0.1:8787";
++         return base.replace(/\/$/, "");
++      }
+ 
+-      private static const TEXT_DIR:String = ROOT_DIR + "text/";
++      private static function get IMAGE_DIR() : String
++      {
++         return baseURL + "/flash/assets/images/";
++      }
+ 
+-      private static const IMAGE_DIR:String = ROOT_DIR + "image/";
+-
+-      private static const SOUND_DIR:String = ROOT_DIR + "sound/";
++      private static function get SOUND_DIR() : String
++      {
++         return baseURL + "/flash/assets/sounds/";
++      }
+ 
+       public function Path()
+       {
+@@ -20,7 +31,7 @@
+ 
+       public static function getText(path:String) : String
+       {
+-         return TEXT_DIR + path;
++         return baseURL + "/flash/assets/text/" + path;
+       }
+ 
+       public static function getCard(path:String) : String
+@@ -30,6 +41,10 @@
+ 
+       public static function getComponent(path:String, inLanguageDir:Boolean = false) : String
+       {
++         if(path == "charin/charin_icon.png")
++         {
++            path = "coin/charin_icon.png";
++         }
+          var dir:String = IMAGE_DIR + "component";
+          if(inLanguageDir)
+          {
+@@ -40,7 +55,7 @@
+ 
+       public static function getSound(path:String) : String
+       {
+-         return path ? SOUND_DIR + path : null;
++         return Boolean(path) ? SOUND_DIR + path : null;
+       }
+    }
+ }

@@ -1,0 +1,241 @@
+[
+  {
+    "path": "modes/training/rooms/fixture-room",
+    "data": {
+      "updatedAt": {
+        "seconds": 1793821595,
+        "nanoseconds": 114603000
+      },
+      "userCount": 1,
+      "users": [
+        {
+          "id": "fixture-user",
+          "name": "RefactorTest"
+        }
+      ]
+    }
+  },
+  {
+    "path": "modes/training/rooms/fixture-room",
+    "data": {
+      "userCount": 1,
+      "updatedAt": {
+        "seconds": 1793821601,
+        "nanoseconds": 386273000
+      },
+      "users": [
+        {
+          "name": "RefactorTest",
+          "id": "fixture-user"
+        }
+      ],
+      "game": {
+        "gf": 2,
+        "attackTurnPlayerId": 2,
+        "updateCount": 1,
+        "players": [
+          {
+            "mp": 30,
+            "hp": 30,
+            "cp": 10,
+            "isBot": true,
+            "name": "Fejz",
+            "items": [
+              {
+                "modelId": 200,
+                "id": 1
+              },
+              {
+                "id": 2,
+                "modelId": 81
+              },
+              {
+                "id": 3,
+                "modelId": 29
+              },
+              {
+                "modelId": 192,
+                "id": 4
+              },
+              {
+                "id": 5,
+                "modelId": 28
+              },
+              {
+                "modelId": 158,
+                "id": 7
+              },
+              {
+                "modelId": 118,
+                "id": 8
+              },
+              {
+                "modelId": 192,
+                "id": 9
+              },
+              {
+                "id": 6,
+                "modelId": 167
+              }
+            ],
+            "id": 1
+          },
+          {
+            "hp": 40,
+            "cp": 20,
+            "id": 2,
+            "userId": "fixture-user",
+            "name": "RefactorTest",
+            "mp": 10,
+            "items": [
+              {
+                "modelId": 192,
+                "id": 1
+              },
+              {
+                "modelId": 196,
+                "id": 2
+              },
+              {
+                "modelId": 26,
+                "id": 3
+              },
+              {
+                "modelId": 196,
+                "id": 4
+              },
+              {
+                "modelId": 199,
+                "id": 5
+              },
+              {
+                "id": 6,
+                "modelId": 148
+              },
+              {
+                "modelId": 219,
+                "id": 7
+              },
+              {
+                "modelId": 140,
+                "id": 8
+              },
+              {
+                "modelId": 135,
+                "id": 9
+              }
+            ]
+          }
+        ],
+        "diseasePlayerId": 2,
+        "updatedAt": {
+          "seconds": 1793821601,
+          "nanoseconds": 386273000
+        },
+        "guardianPlayerIds": [
+          1
+        ],
+        "events": [
+          {
+            "action": "startGame"
+          },
+          {
+            "item": {
+              "id": 1,
+              "modelId": 192
+            },
+            "action": "gift",
+            "playerId": 2
+          },
+          {
+            "action": "gift",
+            "playerId": 2,
+            "item": {
+              "id": 2,
+              "modelId": 196
+            }
+          },
+          {
+            "action": "gift",
+            "playerId": 2,
+            "item": {
+              "modelId": 26,
+              "id": 3
+            }
+          },
+          {
+            "playerId": 2,
+            "action": "gift",
+            "item": {
+              "modelId": 196,
+              "id": 4
+            }
+          },
+          {
+            "playerId": 2,
+            "action": "gift",
+            "item": {
+              "id": 5,
+              "modelId": 199
+            }
+          },
+          {
+            "action": "gift",
+            "playerId": 2,
+            "item": {
+              "modelId": 148,
+              "id": 6
+            }
+          },
+          {
+            "action": "gift",
+            "playerId": 2,
+            "item": {
+              "modelId": 219,
+              "id": 7
+            }
+          },
+          {
+            "item": {
+              "modelId": 140,
+              "id": 8
+            },
+            "playerId": 2,
+            "action": "gift"
+          },
+          {
+            "action": "gift",
+            "playerId": 2,
+            "item": {
+              "modelId": 135,
+              "id": 9
+            }
+          },
+          {
+            "playerId": 1,
+            "action": "advanceGF"
+          },
+          {
+            "action": "useAttackItems",
+            "items": [
+              {
+                "id": 6,
+                "modelId": 3
+              }
+            ]
+          },
+          {
+            "action": "exchange",
+            "mp": 30,
+            "hp": 30,
+            "cp": 10
+          },
+          {
+            "playerId": 2,
+            "action": "advanceGF"
+          }
+        ]
+      }
+    }
+  }
+]

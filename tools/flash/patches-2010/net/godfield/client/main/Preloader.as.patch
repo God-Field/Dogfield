@@ -1,0 +1,19 @@
+--- a/net/godfield/client/main/Preloader.as
++++ b/net/godfield/client/main/Preloader.as
+@@ -7,6 +7,7 @@
+    import flash.system.LoaderContext;
+    import flash.system.SecurityDomain;
+    import net.godfield.Constants;
++   import net.godfield.client.Path;
+ 
+    internal class Preloader extends Loader
+    {
+@@ -36,7 +37,7 @@
+          }
+          else
+          {
+-            this.load(new URLRequest("http://www.godfield.net/game/ipamp.swf"),new LoaderContext(true,null,SecurityDomain.currentDomain));
++            this.load(new URLRequest(Path.baseURL + "/flash/ipamp.swf"),new LoaderContext(true));
+          }
+       }
+    }

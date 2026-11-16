@@ -1,0 +1,14 @@
+--- a/net/godfield/client/game/command/CommandChain.as
++++ b/net/godfield/client/game/command/CommandChain.as
+@@ -7,6 +7,11 @@
+ 
+    public class CommandChain extends net.godfield.game.CommandChain
+    {
++
++      public function probeChangeStatus(aliveList:Array = null) : void
++      {
++         super.changeStatus(aliveList);
++      }
+ 
+       private const _defenseList:Array = [];
+ 

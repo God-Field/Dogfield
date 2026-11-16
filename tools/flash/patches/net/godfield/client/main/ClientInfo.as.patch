@@ -1,0 +1,22 @@
+--- a/net/godfield/client/main/ClientInfo.as
++++ b/net/godfield/client/main/ClientInfo.as
+@@ -49,6 +49,19 @@
+          {
+             this._valid = true;
+          }
++         var localAccount:SharedObject = SharedObject.getLocal("DogfieldFlash2013Account");
++         if(!localAccount.data.token)
++         {
++            var localToken:String = "dogfield-local-";
++            for(var tokenPartIndex:int = 0; tokenPartIndex < 4; tokenPartIndex++)
++            {
++               localToken += ("00000000" + uint(Math.random() * 4294967296).toString(16)).substr(-8);
++            }
++            localAccount.data.token = localToken;
++            localAccount.flush();
++         }
++         this._userID = String(localAccount.data.token);
++         this._valid = true;
+          this.setupOneTimeID();
+       }
+ 

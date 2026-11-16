@@ -1,0 +1,26 @@
+{
+  "gouki_no_kutsu": {
+    "image": "oni_no_kutsu",
+    "item2010": 207,
+    "item2013": 133,
+    "evidence": "2010 Japanese name uses 剛鬼; 2013 uses 鬼. The sets do not coexist in either catalog. Corresponding English names, type, INCREASE_ATK/DFS effect, attack bonus and price match; helm defense changes 6 to 7 and gauntlet 6 to 5. This is replacement artwork for corresponding cards, not proof of identical historical drawings."
+  },
+  "gouki_no_kabuto": {
+    "image": "oni_no_kabuto",
+    "item2010": 241,
+    "item2013": 160,
+    "evidence": "2010 Japanese name uses 剛鬼; 2013 uses 鬼. The sets do not coexist in either catalog. Corresponding English names, type, INCREASE_ATK/DFS effect, attack bonus and price match; helm defense changes 6 to 7 and gauntlet 6 to 5. This is replacement artwork for corresponding cards, not proof of identical historical drawings."
+  },
+  "gouki_no_kote": {
+    "image": "oni_no_kote",
+    "item2010": 242,
+    "item2013": 146,
+    "evidence": "2010 Japanese name uses 剛鬼; 2013 uses 鬼. The sets do not coexist in either catalog. Corresponding English names, type, INCREASE_ATK/DFS effect, attack bonus and price match; helm defense changes 6 to 7 and gauntlet 6 to 5. This is replacement artwork for corresponding cards, not proof of identical historical drawings."
+  },
+  "gouki_no_yoroi": {
+    "image": "oni_no_yoroi",
+    "item2010": 272,
+    "item2013": 170,
+    "evidence": "2010 Japanese name uses 剛鬼; 2013 uses 鬼. The sets do not coexist in either catalog. Corresponding English names, type, INCREASE_ATK/DFS effect, attack bonus and price match; helm defense changes 6 to 7 and gauntlet 6 to 5. This is replacement artwork for corresponding cards, not proof of identical historical drawings."
+  }
+}

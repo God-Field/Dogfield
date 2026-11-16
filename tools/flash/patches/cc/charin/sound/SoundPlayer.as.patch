@@ -1,0 +1,30 @@
+--- a/cc/charin/sound/SoundPlayer.as
++++ b/cc/charin/sound/SoundPlayer.as
+@@ -87,7 +87,7 @@
+          music = sound;
+          try
+          {
+-            musicChannel = sound.play();
++            musicChannel = sound.play(0,0,new SoundTransform(_mute ? 0 : _volume));
+          }
+          catch(error:Error)
+          {
+@@ -114,10 +114,17 @@
+ 
+       public static function play(sound:Sound) : void
+       {
++         // Do not start silent effects: applying a transform after play can leak
++         // the first audio buffer before the channel volume is updated.
++         if(_mute || _volume <= 0)
++         {
++            return;
++         }
++
+          var channel:SoundChannel = null;
+          try
+          {
+-            channel = sound.play();
++            channel = sound.play(0,0,new SoundTransform(_volume));
+          }
+          catch(error:Error)
+          {

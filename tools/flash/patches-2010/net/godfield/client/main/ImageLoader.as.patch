@@ -1,0 +1,24 @@
+--- a/net/godfield/client/main/ImageLoader.as
++++ b/net/godfield/client/main/ImageLoader.as
+@@ -16,8 +16,7 @@
+       internal function start() : void
+       {
+          var mystery:Mystery = null;
+-         var i:int = 0;
+-         new Image("offline/entrance/login_bonus.png");
++         var imageIndex:int = 0;
+          new Image("game/background.jpg");
+          new Card();
+          for each(mystery in Mystery.values)
+@@ -25,9 +24,9 @@
+             new MysteryImage(mystery);
+          }
+          new Image("game/effect/yen.png");
+-         for(i = 0; i <= 9; i++)
++         for(imageIndex = 0; imageIndex <= 9; imageIndex++)
+          {
+-            new Image("game/effect/yen_" + i + ".png");
++            new Image("game/effect/yen_" + imageIndex + ".png");
+          }
+       }
+    }

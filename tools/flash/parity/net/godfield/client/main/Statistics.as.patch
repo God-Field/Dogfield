@@ -1,0 +1,270 @@
+--- a/net/godfield/client/main/Statistics.as
++++ b/net/godfield/client/main/Statistics.as
+@@ -1,35 +1,242 @@
+ package net.godfield.client.main
+ {
+-   import cc.charin.kongregate.StatisticsAPI;
+-   import flash.net.SharedObject;
+-   import net.godfield.Language;
+-
++   import net.godfield.client.game.command.ClientAttackCommand;
++   import net.godfield.client.game.command.ClientDefenseCommand;
++   import net.godfield.client.game.command.CommandChain;
++   import net.godfield.game.Assistant;
++   import net.godfield.game.AttackExtra;
++   import net.godfield.game.AssistantType;
++   import net.godfield.game.AttackKind;
++   import net.godfield.game.Command;
++   import net.godfield.game.CommandPiece;
++   import net.godfield.game.DefenseCommand;
++   import net.godfield.game.Disease;
++   import net.godfield.game.Harm;
++   import net.godfield.game.Mystery;
++   import net.godfield.game.Player;
++   import net.godfield.game.PlayerListHandler;
++   import net.godfield.game.PowerType;
++
++   /** Calls the original movie's rules directly, with no animation delays. */
+    public class Statistics
+    {
+-
+-      private static var instance:Statistics = new Statistics();
+-
+-      private var statisticsAPI:StatisticsAPI;
+-
+-      public function Statistics()
+-      {
+-         super();
+-      }
+-
+-      internal static function submit() : void
+-      {
+-      }
+-
+-      public static function winTraining() : void
+-      {
+-         if(Language.current != Language.ENGLISH)
++      // The production Statistics class is already disabled. Reuse its script
++      // slot only in the temporary diagnostic movie, leaving game rules intact.
++      internal static function submit() : void {}
++
++      public static function winTraining() : void {}
++
++      private var players:Array;
++      private var byName:Object;
++      private var current:Player;
++      private var chain:CommandChain;
++      private var lastAttack:ClientAttackCommand;
++
++      public function replay(source:String) : String
++      {
++         XML.prettyPrinting = false;
++         var input:XML = XML(source);
++         var playerXML:XML;
++         this.players = [];
++         this.byName = {};
++         this.chain = null;
++         this.lastAttack = null;
++         for each(playerXML in input.players.player)
++         {
++            var player:Player = new Player(String(playerXML.child("name")));
++            player.init();
++            player.setXML(playerXML);
++            this.players.push(player);
++            this.byName[player.name] = player;
++         }
++         var stepIndex:int = 0;
++         var message:XML;
++         var result:XML = <result/>;
++         try
++         {
++            for each(var step:XML in input.step)
++            {
++               for each(message in step.messages.*)
++               {
++                  this.receive(message);
++               }
++               for each(playerXML in step.expected.player)
++               {
++                  player = this.byName[String(playerXML.@name)];
++                  var actual:String = this.state(player);
++                  if(actual != String(playerXML.@state))
++                  {
++                     result.@step = stepIndex;
++                     result.@player = player.name;
++                     result.actual = actual;
++                     result.expected = String(playerXML.@state);
++                     result.appendChild(step.messages);
++                     return result.toXMLString();
++                  }
++               }
++               stepIndex++;
++            }
++            result.@steps = stepIndex;
++         }
++         catch(caughtError:Error)
++         {
++            result.@step = stepIndex;
++            result.error = caughtError.toString();
++            result.appendChild(message);
++         }
++         return result.toXMLString();
++      }
++
++      private function state(player:Player) : String
++      {
++         var activeHarms:Array = [];
++         for each(var harm:Harm in Harm.values)
++         {
++            if(!harm.isDisease && player.hasHarm(harm))
++            {
++               activeHarms.push(harm.toString());
++            }
++         }
++         activeHarms.sort();
++         return [player.name,player.hp,player.mp,player.yen,
++            player.disease ? player.disease.toString() : "",player.isDead,player.isLost,
++            player.assistant ? player.assistant.type.toString() : "",
++            player.assistant ? player.assistant.hp : 0,activeHarms.join(",")].join("|");
++      }
++
++      private function applyChain() : void
++      {
++         this.lastAttack = this.chain.clientAttack;
++         if(this.chain.canBuy)
+          {
+             return;
+          }
+-         var sharedObject:SharedObject = SharedObject.getLocal("Statistics");
+-         sharedObject.data.trainingWin = true;
+-         submit();
++         this.changeStatus();
++      }
++
++      private function changeStatus() : void
++      {
++         var kind:AttackKind = this.chain.attack.kind;
++         if(kind == AttackKind.SCATTER_YEN || kind == AttackKind.MYSTERY)
++         {
++            this.chain.probeChangeStatus(new PlayerListHandler(this.players).newAliveList());
++            if(this.chain.attack.mystery == Mystery.MOON)
++            {
++               for each(var entry:Object in ClientAttackCommand(this.chain.attack).playerList)
++               {
++                  Player(this.byName[String(entry.name)]).assistant = new Assistant(entry.assistantType);
++               }
++            }
++         }
++         else
++         {
++            this.chain.probeChangeStatus();
++         }
++      }
++
++      private function receive(message:XML) : void
++      {
++         var player:Player;
++         switch(message.localName())
++         {
++            case "START_INNING":
++               this.current = this.byName[String(message.attacker.child("name"))];
++               this.chain = null;
++               this.lastAttack = null;
++               break;
++            case "COMMAND":
++               this.command(message);
++               break;
++            case "BUY":
++               this.chain.doBuy = Boolean(message.doBuy.length());
++               this.changeStatus();
++               break;
++            case "DISEASE":
++               player = this.current;
++               if(message.worse.length())
++               {
++                  player.addDisease(Disease.COLD);
++               }
++               if(player.hp != 0)
++               {
++                  player.increasePower(PowerType.HP,-player.disease.damage);
++               }
++               break;
++            case "DYING":
++               var dyingPiece:CommandPiece = CommandPiece.fromXML(XML(message.piece));
++               if(dyingPiece.item.attackExtra == AttackExtra.REVIVE)
++               {
++                  player = message.isAttacker.length() ? this.current : this.chain.defender;
++                  player.hp = dyingPiece.item.value;
++               }
++               break;
++            case "UNFOG":
++               // This observer already knows every player's state. Apply only
++               // the owner's fog transition, so snapshots cannot hide a drift.
++               Player(this.byName[String(message.probeRecipient)]).setHarm(Harm.FOG,false);
++               break;
++            case "DIE":
++               Player(this.byName[String(message.player.child("name"))]).die();
++               break;
++            case "END_INNING":
++               new PlayerListHandler(this.players).updateLosers();
++               break;
++         }
++      }
++
++      private function command(message:XML) : void
++      {
++         var command:Command;
++         var pieceXML:XML;
++         var piece:CommandPiece;
++         var commandingPlayer:Player;
++         var repeat:Boolean = false;
++         var isAttack:Boolean = !this.chain || this.chain.isFinished;
++         if(isAttack)
++         {
++            var commander:Player = message.commander.length() ? this.byName[String(message.commander.child("name"))] : this.current;
++            this.chain = new CommandChain(null);
++            var attack:ClientAttackCommand = new ClientAttackCommand(commander);
++            attack.setXML(message);
++            commandingPlayer = commander;
++            var repeatable:Boolean = attack.hitRate != 0 || attack.getPiece(0).item.attackKind == AttackKind.MYSTERY;
++            repeat = repeatable && attack.equals(this.lastAttack) && this.lastAttack && this.lastAttack.commander == commander;
++            this.chain.clientAttack = attack;
++            command = attack;
++         }
++         else
++         {
++            commandingPlayer = this.chain.defender;
++            var defense:DefenseCommand = new ClientDefenseCommand(this.chain);
++            for each(pieceXML in message.piece)
++            {
++               piece = CommandPiece.fromXML(pieceXML);
++               defense.add(piece);
++            }
++            this.chain.addDefense(ClientDefenseCommand(defense));
++            command = defense;
++         }
++         if(message.target.length())
++         {
++            command.target = this.byName[String(message.target.child("name"))];
++         }
++         if(message.commandChain.length())
++         {
++            for each(pieceXML in message.commandChain.piece)
++            {
++               this.chain.pieceList.push(CommandPiece.fromXML(pieceXML));
++            }
++            this.chain.hp = int(message.commandChain.hp);
++            this.chain.assistantType = AssistantType[message.commandChain.assistantType];
++         }
++         if(!repeat && (!isAttack || !this.chain.attack.assistantType))
++         {
++            commandingPlayer.mp -= command.costMP;
++         }
++         if(this.chain.isFinished)
++         {
++            this.applyChain();
++         }
+       }
+    }
+ }
+-

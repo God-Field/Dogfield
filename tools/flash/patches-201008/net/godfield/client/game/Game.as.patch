@@ -1,0 +1,11 @@
+--- a/net/godfield/client/game/Game.as
++++ b/net/godfield/client/game/Game.as
+@@ -213,7 +213,7 @@
+          if(xml.players.toXMLString())
+          {
+             this.statusList.setXML(XML(xml.players));
+-            if((Boolean(Main.instance.place.serverType == ServerType.TRAINING) || Boolean(Main.instance.client.info.platform)) && (Boolean(!this.started || this.ended) || Boolean(xml.privatePlayer.toString())))
++            if((Boolean(Main.instance.place.serverType == ServerType.TRAINING) || Boolean(Main.instance.client.info.advanced)) && (Boolean(!this.started || this.ended) || Boolean(xml.privatePlayer.toString())))
+             {
+                this.player = this.statusList.getPlayer(Main.instance.client.info.name);
+             }

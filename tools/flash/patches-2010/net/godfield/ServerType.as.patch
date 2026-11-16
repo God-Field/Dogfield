@@ -1,0 +1,50 @@
+--- a/net/godfield/ServerType.as
++++ b/net/godfield/ServerType.as
+@@ -1,6 +1,7 @@
+ package net.godfield
+ {
+    import cc.charin.utils.Enum;
++   import net.godfield.client.main.Main;
+ 
+    public final class ServerType extends Enum
+    {
+@@ -22,28 +23,23 @@
+ 
+       public function get host() : String
+       {
+-         if(Constants.IS_TEST)
++         var parameters:Object = Main.instance.loaderInfo.parameters;
++         if(parameters.serverHost)
+          {
+-            return "localhost";
++            return String(parameters.serverHost);
+          }
+-         return this.toLowerCase() + ".godfield.net";
++         if(parameters.serverURL)
++         {
++            var authority:String = String(parameters.serverURL).split("://")[1].split("/")[0];
++            return authority.charAt(0) == "[" ? authority.substring(1, authority.indexOf("]")) : authority.split(":")[0];
++         }
++         return "127.0.0.1";
+       }
+ 
+       public function get port() : int
+       {
+-         switch(this)
+-         {
+-            case TRAINING:
+-               return 58001;
+-            case FREE_FIGHT:
+-               return 58101;
+-            case SPIRIT:
+-               return 58201;
+-            case DUEL:
+-               return 58301;
+-            default:
+-               throw new Error("this is [" + this + "]");
+-         }
++         var parameters:Object = Main.instance.loaderInfo.parameters;
++         return parameters.serverPort ? int(parameters.serverPort) : 58001;
+       }
+ 
+       public function toLowerCase() : String

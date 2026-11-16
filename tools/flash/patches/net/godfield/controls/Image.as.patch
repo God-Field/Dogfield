@@ -1,0 +1,121 @@
+--- a/net/godfield/controls/Image.as
++++ b/net/godfield/controls/Image.as
+@@ -4,8 +4,11 @@
+    import flash.display.Bitmap;
+    import flash.display.BitmapData;
+    import flash.events.Event;
++   import flash.events.IOErrorEvent;
++   import flash.events.SecurityErrorEvent;
+    import flash.net.URLRequest;
+    import flash.system.LoaderContext;
++   import flash.utils.setTimeout;
+ 
+    public class Image extends UILoader
+    {
+@@ -14,48 +17,50 @@
+ 
+       private static const lodingMap:Object = {};
+ 
+-      private var path:String;
++      private var _onLoaded:Function;
+ 
+       private var _loaded:Boolean;
+ 
+-      private var _onLoaded:Function;
++      private var path:String;
+ 
+       public function Image(path:String)
+       {
+          super();
+          this.path = path;
+          this.scaleContent = false;
+-         if(Boolean(bitmapDataMap[this.path]))
++         if(bitmapDataMap[this.path])
+          {
+             this.setup();
+          }
+-         else if(Boolean(lodingMap[this.path]))
++         else if(lodingMap[this.path])
+          {
+             (lodingMap[this.path] as Array).push(this);
+          }
+          else
+          {
+             this.addEventListener(Event.COMPLETE,this.onComplete);
++            if(this.path.indexOf("/images/card/") >= 0)
++            {
++               this.addEventListener(IOErrorEvent.IO_ERROR,this.onMissingCardImage);
++               this.addEventListener(SecurityErrorEvent.SECURITY_ERROR,this.onMissingCardImage);
++            }
++            lodingMap[this.path] = [this];
+             this.load(new URLRequest(path),new LoaderContext(true));
+-            lodingMap[this.path] = [this];
++         }
++      }
++
++      public function set onLoaded(value:Function) : void
++      {
++         this._onLoaded = value;
++         if(this.loaded)
++         {
++            this._onLoaded();
+          }
+       }
+ 
+       public function get loaded() : Boolean
+       {
+          return this._loaded;
+-      }
+-
+-      private function onComplete(event:Event) : void
+-      {
+-         var image:Image = null;
+-         this.removeEventListener(Event.COMPLETE,this.onComplete);
+-         bitmapDataMap[this.path] = Bitmap(this.content).bitmapData;
+-         for each(image in lodingMap[this.path] as Array)
+-         {
+-            image.setup();
+-         }
+-         lodingMap[this.path] = null;
+       }
+ 
+       private function setup() : void
+@@ -74,14 +79,33 @@
+          }
+       }
+ 
+-      public function set onLoaded(value:Function) : void
++      private function onMissingCardImage(event:Event) : void
+       {
+-         this._onLoaded = value;
+-         if(this.loaded)
++         // Keep the normal 80x80 layout, hit area and completion callbacks.
++         // A failed request must release every image waiting for this URL.
++         this.removeEventListener(IOErrorEvent.IO_ERROR,this.onMissingCardImage);
++         this.removeEventListener(SecurityErrorEvent.SECURITY_ERROR,this.onMissingCardImage);
++         // UILoader still needs its failed Loader during handleError cleanup.
++         setTimeout(this.finishLoading,0,new BitmapData(80,80,true,0));
++      }
++
++      private function onComplete(event:Event) : void
++      {
++         this.finishLoading(Bitmap(this.content).bitmapData);
++      }
++
++      private function finishLoading(bitmapData:BitmapData) : void
++      {
++         this.removeEventListener(Event.COMPLETE,this.onComplete);
++         this.removeEventListener(IOErrorEvent.IO_ERROR,this.onMissingCardImage);
++         this.removeEventListener(SecurityErrorEvent.SECURITY_ERROR,this.onMissingCardImage);
++         bitmapDataMap[this.path] = bitmapData;
++         var waitingImages:Array = lodingMap[this.path] as Array;
++         lodingMap[this.path] = null;
++         for each(var waitingImage:Image in waitingImages)
+          {
+-            this._onLoaded();
++            waitingImage.setup();
+          }
+       }
+    }
+ }
+-

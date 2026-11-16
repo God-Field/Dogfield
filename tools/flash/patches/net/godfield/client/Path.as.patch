@@ -1,0 +1,34 @@
+--- a/net/godfield/client/Path.as
++++ b/net/godfield/client/Path.as
+@@ -1,15 +1,28 @@
+ package net.godfield.client
+ {
+    import net.godfield.Language;
++   import flash.display.LoaderInfo;
++   import net.godfield.client.main.Main;
+ 
+    public class Path
+    {
+ 
+-      private static const STATIC_DIR:String = "http://static.godfield.net/";
++      public static function get baseURL() : String
++      {
++         var parameters:Object = Main.instance.loaderInfo.parameters;
++         var base:String = parameters.serverURL ? String(parameters.serverURL) : "http://127.0.0.1:8787";
++         return base.replace(/\/$/, "");
++      }
+ 
+-      private static const IMAGE_DIR:String = STATIC_DIR + "images/";
++      private static function get IMAGE_DIR() : String
++      {
++         return baseURL + "/flash/assets/images/";
++      }
+ 
+-      private static const SOUND_DIR:String = STATIC_DIR + "sounds/";
++      private static function get SOUND_DIR() : String
++      {
++         return baseURL + "/flash/assets/sounds/";
++      }
+ 
+       public function Path()
+       {

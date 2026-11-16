@@ -1,0 +1,11 @@
+--- a/net/godfield/client/offline/entrance/ServerButton.as
++++ b/net/godfield/client/offline/entrance/ServerButton.as
+@@ -81,7 +81,7 @@
+          }
+          var loader:URLLoader = new URLLoader();
+          loader.addEventListener(Event.COMPLETE,this.onComplete);
+-         loader.load(new URLRequest("http://" + this.serverType.host + "/api/getUserCount"));
++         loader.load(new URLRequest(net.godfield.client.Path.baseURL + "/flash/api/getUserCount"));
+       }
+ 
+       private function onComplete(event:Event) : void

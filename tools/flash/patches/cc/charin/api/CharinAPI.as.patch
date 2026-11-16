@@ -1,0 +1,23 @@
+--- a/cc/charin/api/CharinAPI.as
++++ b/cc/charin/api/CharinAPI.as
+@@ -1,9 +1,13 @@
+ package cc.charin.api
+ {
++   import net.godfield.client.Path;
++
+    public class CharinAPI extends AbstractAPI
+    {
+-
+-      internal static const API_URL:String = "http://charin.cc/api/";
++      internal static function get API_URL() : String
++      {
++         return Path.baseURL + "/flash/api/";
++      }
+ 
+       public function CharinAPI(userID:String, method:String, args:Object = null)
+       {
+@@ -16,4 +20,3 @@
+       }
+    }
+ }
+-

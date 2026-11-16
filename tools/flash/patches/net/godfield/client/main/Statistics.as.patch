@@ -1,0 +1,21 @@
+--- a/net/godfield/client/main/Statistics.as
++++ b/net/godfield/client/main/Statistics.as
+@@ -18,17 +18,7 @@
+ 
+       internal static function submit() : void
+       {
+-         if(Language.current != Language.ENGLISH)
+-         {
+-            return;
+-         }
+-         var sharedObject:SharedObject = SharedObject.getLocal("Statistics");
+-         instance.statisticsAPI = new StatisticsAPI(Main.instance);
+-         instance.statisticsAPI.add({
+-            "name":"TrainingWin",
+-            "value":(Boolean(sharedObject.data.trainingWin) ? 1 : 0)
+-         });
+-         instance.statisticsAPI.submit();
++         return;
+       }
+ 
+       public static function winTraining() : void

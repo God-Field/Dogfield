@@ -1,0 +1,14 @@
+--- a/cc/charin/api/CharinAPI.as
++++ b/cc/charin/api/CharinAPI.as
+@@ -3,7 +3,10 @@
+    public class CharinAPI extends AbstractAPI
+    {
+ 
+-      internal static const API_URL:String = "http://charin.cc/api/";
++      internal static function get API_URL() : String
++      {
++         return net.godfield.client.Path.baseURL + "/flash/api/";
++      }
+ 
+       public function CharinAPI(userID:String, method:String, args:Object = null)
+       {

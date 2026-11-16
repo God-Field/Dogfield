@@ -1,0 +1,24 @@
+--- a/net/godfield/client/main/Main.as
++++ b/net/godfield/client/main/Main.as
+@@ -19,17 +19,19 @@
+ 
+       private const _place:Place = new Place();
+ 
+-      private const _bottomBar:BottomBar = new BottomBar();
++      private var _bottomBar:BottomBar;
+ 
+       private const _client:Client = new Client();
+ 
+-      private const _topBar:TopBar = new TopBar();
++      private var _topBar:TopBar;
+ 
+       public function Main()
+       {
+          super();
+          _instance = this;
+          this.client.info.load();
++         this._topBar = new TopBar();
++         this._bottomBar = new BottomBar();
+          new Preloader().start();
+          var _mochiads_game_id:String = "dfcd8a1598507377";
+       }

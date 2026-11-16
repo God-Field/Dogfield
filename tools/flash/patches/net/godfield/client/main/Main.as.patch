@@ -1,0 +1,23 @@
+--- a/net/godfield/client/main/Main.as
++++ b/net/godfield/client/main/Main.as
+@@ -26,9 +26,9 @@
+ 
+       private const _client:Client = new Client();
+ 
+-      private const _topBar:TopBar = new TopBar();
++      private var _topBar:TopBar;
+ 
+-      private const _bottomBar:BottomBar = new BottomBar();
++      private var _bottomBar:BottomBar;
+ 
+       private var _content:Sprite = null;
+ 
+@@ -39,6 +39,8 @@
+          super();
+          _instance = this;
+          this.clientInfo.load();
++         this._topBar = new TopBar();
++         this._bottomBar = new BottomBar();
+          Statistics.submit();
+          new Preloader().start();
+       }

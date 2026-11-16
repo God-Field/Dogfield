@@ -1,0 +1,19 @@
+--- a/net/godfield/client/offline/entrance/ServerButton.as
++++ b/net/godfield/client/offline/entrance/ServerButton.as
+@@ -6,6 +6,7 @@
+    import flash.filters.BevelFilter;
+    import flash.net.URLLoader;
+    import flash.net.URLRequest;
++   import net.godfield.client.Path;
+    import flash.text.TextFormatAlign;
+    import net.godfield.ServerType;
+    import net.godfield.client.Color;
+@@ -91,7 +92,7 @@
+          }
+          var loader:URLLoader = new URLLoader();
+          loader.addEventListener(Event.COMPLETE,this.onComplete);
+-         loader.load(new URLRequest("http://" + this.serverType.getHost(this.isPrivate,this.serverNumber) + "/api/getUserCount"));
++         loader.load(new URLRequest(Path.baseURL + "/flash/api/getUserCount"));
+       }
+ 
+       private function onComplete(event:Event) : void

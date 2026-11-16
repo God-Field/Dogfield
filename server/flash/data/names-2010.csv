@@ -1,0 +1,364 @@
+inoru,Pray,Nothing happens
+suteru,Discard,Discards an artifact<br />New artifact is not given
+ryougae,Exchange,Exchanges<br />(HP1 = MP1 = ¥1)
+uru,Sell,Sells an artifact
+kau,Buy,Buys an artifact
+kin_no_kombou,Gold Club
+gin_no_kombou,Silver Club
+dou_no_kombou,Bronze Club
+paper_knife,Paper Knife
+pikopiko_hammer,Piko Piko Hammer
+rope,Rope
+tsue,Rod
+fukiya,Blowgun
+knife,Knife
+sabita_ken,Rusty Sword
+slender_sword,Slender Sword
+hammer,Hammer
+kuda,Pipe
+mace,Mace
+muchi,Whip
+saver_rod,Saver Rod
+bowgun,Bowgun
+alumi_knife,Aluminum Knife
+usagi_no_ken,Rabbit Sword
+kyokutou,Curved Sword
+mikazukitou,Crescent Sword
+kusarigama,Chain Sickle
+masakari,Axe
+renga_no_tonkachi,Brick Hammer
+knuckle,Knuckle
+boomerang,Boomerang
+evil_slayer,Evil Slayer
+yawaraka_sword,Soft Sword
+nokobunbun,Saw Boom Boom
+alumi_spear,Aluminum Spear
+hand_axe,Hand Axe
+flail,Flail
+nunchaku,Nunchaku
+toge_belt,Needle Belt
+bane_chop,Spring Chop
+battle_ball,Battle Ball
+wonder_edge,Wonder Edge
+great_sword,Great Sword
+hangetsutou,Half Moon Sword
+naginata,Naginata
+leo_claw,Leo Claw
+toushi_no_teppan,Fighter's Plate
+randamuken,Random Sword
+kenshi_no_yumi,Swordsman's Bow
+energy_knife,Energy Knife
+chuutohampa_sword,Unfinished Sword
+koi_no_yokan_sword,Love Sword
+marumie_shikomizue,Exposure Sword Cane
+naginata_special,Naginata Special
+bukkomi_axe,Rush Axe
+namari_no_tsuchi,Lead Hammer
+looong_whip,Looong Whip
+elbow_sack,Elbow Sack
+jet_yo-yo,Jet Yo-Yo
+otona_no_pachinko,Adult Slingshot
+dirty_kogatana,Dirty Knife
+wave_sword,Wave Sword
+ghost_sword,Ghost Sword
+naginata_classic,Naginata Classic
+mamori_no_hoko,Spear of Defense
+hagane_no_ono,Steel Axe
+hagane_no_mace,Steel Mace
+hagane_no_knuckle,Steel Knuckle
+power_rod,Power Rod
+wasuretai_tsubasa,Wing Wanted to Forget
+final_kiba,Final Ivory
+power_blade,Power Blade
+jigoku_no_hasami,Hell Scissors
+inchiki_spear,Cheat Spear
+power_axe,Power Axe
+flail_flail,Flail Flail
+positive_knuckle,Positive Knuckle
+energy_whip,Energy Whip
+sky_harpoon,Sky Harpoon
+taima_no_ken,Exorcism Sword
+fukashi_blade,Invisible Blade
+shippuuken,Gale Sword
+power_halbert,Power Halbert
+power_hammer,Power Hammer
+chimera_claw,Chimera Claw
+aku_no_tsue,Rod of Vice
+chain_hook,Chain Hook
+psychic_card,Psychic Card
+wonder_sword,Wonder Sword
+kyoken,Gigantic Sword
+sword_shield,Sword Shield
+goranshin,Crazy Mind
+gekkou_no_ono,Moonlight Axe
+hanshaken,Reflection Sword
+real_ghost_sword,Real Ghost Sword
+rokkakkyou,Hexagon Doom
+gravity_mace,Gravity Mace
+abare_flail,Rowdy Flail
+plasma_bou,Plasma Bar
+kyoufu_no_sharin,Horror Wheel
+rainbow_blade,Rainbow Blade
+akumu_no_tachi,Nightmare Sword
+moro_bukkomi_axe,Direct Rush Axe
+sammata_no_muchi,Threesome Whip
+seirei_no_tsue,Soul Cane
+gekiretsu_shippuuken,Violent Gale Sword
+zekkei_no_yari,Spear of Fantastic View
+densetsu_no_ken_no_saya,Scabbard of the Legend
+koma_combat,Combat Top
+jashin_no_taiken,Maumet's Broad Sword
+dragon_claw,Dragon Claw
+cosmic_rod,Cosmic Rod
+angel_knife,Angel Knife
+angel_sword,Angel Sword
+angel_axe,Angel Axe
+angel_no_yumi,Angel Bow
+kami_no_ken,God Sword
+magical_stick,Magical Stick
+taimatsu,Torch
+tsurara,Icicle
+bokutou,Wooden Sword
+takeyari,Bamboo Spear
+sunakaze_no_tsume,Claw of Sand Wind
+kagayaki_no_kakera,Piece of Brilliancy
+chikurincho,Pri Pri Pricker
+achichi_knife,Ouch Knife
+hakka_no_wand,Wand of Ignition
+aqua_axe,Aqua Axe
+ibara_no_muchi,Thorn Whip
+happa_shuriken,Throwing Leaf
+tsurugiyaki,Sword Ware
+eikou_aru_dagger,Glorious Dagger
+moe_muchi,Fire Whip
+hyouketsu_hammer,Frozen Hammer
+kirideppou,Fog Gun
+iga_nut,Bur Nut
+gom_no_yumi,Rubber Bow
+star_staff,Star Staff
+cobra,Cobra
+scorpion,Scorpion
+blaze_blade,Blaze Blade
+homuramaki,Flame Roll
+snow_sword,Snow Sword
+yume_no_kizuchi,Dream Mallet
+kyuusekki_javelin,Paleolith Javelin
+kyuusekki_tomahawk,Paleolith Tomahawk
+lightning_axe,Lightning Axe
+fire_bowgun,Fire Bowgun
+masui_no_wand,Wand of Spell Water
+kodaishokubutsu_no_muchi,Whip of Ancient Plant
+justice_lance,Justice Lance
+killer_fork,Killer Fork
+kage_no_dart,Shadow Dart
+shinkutou,Crimson Sword
+sayonara_no_ken,Bye Bye Sword
+karyuu_ikkaku,Fire Dragon's Horn
+suiryuu_ikkaku,Water Dragon's Horn
+seiken,Holy Sword
+shinigami_no_kama,Death Scythe
+diamond_sword,Diamond Sword
+abunai_kine,Dangerous Pestle
+hinoko_bukuro,Fire Bag
+demon_hand,Demon Hand
+kiri_no_ougi,Fog Fan
+tsuru_shoot,Vine Shoot
+inazuma_kids,Thunder Kids
+kaenhai,Flame Cup
+reikihai,Chill Cup
+shinrinhai,Forest Cup
+daichihai,Ground Cup
+yukidama_gorogoro,Rolling Snow Ball
+gakettsuchi,Cliff Hammer
+hikari_no_orb,Light Orb
+rekka_shower,Scorching Shower
+majin_no_mokuba,Genie's Wooden Horse
+gouu_no_saber,Downpour Saber
+flare_axe,Flare Axe
+petit_saturn,Petit Saturn
+shoutenkyuu,Ascension Bow
+kawa_no_tate,Leather Shield
+kawa_no_fuku,Leather Shirt
+nuno_no_fuku,Cloth Shirt
+kawa_no_boushi,Leather Cap
+mugiwara_boushi,Straw Hat
+sabita_kote,Rusty Gauntlet
+slipper,Slipper
+aqua_glove,Aqua Glove
+aqua_shoes,Aqua Shoes
+sekiban,Slate
+sabita_tate,Rusty Shield
+kawa_no_yoroi,Leather Armor
+chuuko_no_stole,Used Stole
+sabita_kabuto,Rusty Helm
+alumi_gauntlet,Aluminum Gauntlet
+sky_gauntlet,Sky Gauntlet
+hibana_no_kote,Spark Gauntlet
+hibana_no_kutsu,Spark Boots
+aqua_cap,Aqua Cap
+ki_no_tate,Wood Shield
+ganban,Bedrock
+mini_buckler,Mini Buckler
+maxi_buckler,Maxi Buckler
+sabita_yoroi,Rusty Armor
+kusari_katabira,Chain Mail
+kawaii_apron,Lovely Apron
+alumi_helm,Aluminum Helm
+honobono_cap,Sweet Cap
+gouki_no_kutsu,Ogre's Shoes
+sky_boots,Sky Boots
+flame_boots,Flame Boots
+ice_boots,Ice Boots
+kusa_kammuri,Grass Crown
+alumi_shield,Aluminum Shield
+attaka_coat,Warm Coat
+sky_shield,Sky Shield
+sky_armor,Sky Armor
+sky_helm,Sky Helm
+flame_shield,Flame Shield
+aqua_suit,Aqua Suit
+ice_gauntlet,Ice Gauntlet
+hayashi_no_tate,Woods Shield
+kesshouban,Crystal Board
+daichi_no_kabuto,Ground Helm
+daichi_no_kote,Ground Gauntlet
+daichi_no_kutsu,Ground Shoes
+standard_shield,Standard Shield
+alumi_armor,Aluminum Armor
+kinu_no_robe,Silk Robe
+wonder_hat,Wonder Hat
+energy_wrist,Energy Wrist
+senshi_no_kote,Gauntlet for Warriors
+houshi_no_kote,Gauntlet for Monks
+flame_met,Flame Helm
+ice_helm,Ice Helm
+snow_mitten,Snow Mitten
+jushi_de_anda_houi,Robe Knitted by Resin
+goshimboku_no_kote,Gauntlet of Sacred Tree
+monster_mail,Monster Mail
+relax_helm,Relax Helm
+energy_band,Energy Band
+warai_no_boushi,Cap of Laugh
+gouki_no_kabuto,Ogre's Helm
+gouki_no_kote,Ogre's Gauntlet
+flame_mail,Flame Mail
+ice_shield,Ice Shield
+ice_armor,Ice Armor
+mori_no_tate,Dense Woods Shield
+pikapika_high_heel,Shining High Heels
+hagane_no_tate,Steel Shield
+hagane_no_yoroi,Steel Armor
+yuuki_no_yoroi,Armor of Courage
+subesube_armor,Smooth Armor
+energy_wear,Energy Wear
+hagane_no_kabuto,Steel Helm
+hagane_no_kote,Steel Gauntlet
+dragon_no_tate,Dragon Shield
+dragon_no_yoroi,Dragon Armor
+snow_mask,Snow Mask
+double_shield,Double Shield
+kenja_no_shitagi,Sage's Undergarment
+energy_helm,Energy Helm
+rare_metal_helm,Rare Metal Helm
+burn_shield,Burn Shield
+burn_jacket,Burn Jacket
+kohaku_no_muneate,Amber Breastplate
+daichi_no_yoroi,Ground Armor
+mashou_no_tate,Enchanting Shield
+boudan_glas_zaiku,Bulletproof Glasswork
+energy_armor,Energy Armor
+taima_no_yoroi,Exorcism Armor
+taima_no_kabuto,Exorcism Helm
+taima_no_kote,Exorcism Gauntlet
+gouki_no_yoroi,Ogre's Armor
+seirei_no_tabi,Soul Socks
+wonder_body,Wonder Body
+seishun_no_seifuku,Youthful Uniform
+gekkou_no_tate,Moonlight Shield
+gekkou_no_yoroi,Moonlight Armor
+gekkou_no_kabuto,Moonlight Helm
+seirei_no_zukin,Soul Hood
+nekkyou_kamen,Fever Mask
+kirakira_dress,Glittering Dress
+rainbow_shield,Rainbow Shield
+rainbow_helm,Rainbow Helm
+rainbow_gauntlet,Rainbow Gauntlet
+seirei_no_obi,Soul Sash
+core_barrier,Core Barrier
+core_protector,Core Protector
+elite_no_mantle,Elite's Mantle
+kagerou_no_yoroi,Heat Shimmer Armor
+rainbow_mail,Rainbow Mail
+angel_shield,Angel Shield
+angel_no_boushi,Angel Cap
+angel_no_kote,Angel Gauntlet
+yumemiru_boushi,Dreaming Hat
+angel_armor,Angel Armor
+kami_no_tate,God Shield
+kasei_no_yubiwa,Ring of Mars,Counterattacks by 75%Atk{damage}
+suisei_no_yubiwa,Ring of Mercury,Counterattacks by Fog
+mokusei_no_yubiwa,Ring of Jupiter,Counterattacks by Illusion
+dosei_no_yubiwa,Ring of Saturn,Counterattacks by Atk{2 x damage}
+tennou_no_yubiwa,Ring of Uranus,Counterattacks by Glory
+meiou_no_yubiwa,Ring of Pluto,Counterattacks by Dark Cloud
+kaiou_no_yubiwa,Ring of Neptune,+MP{2 x damage}
+kinsei_no_yubiwa,Ring of Venus,Counterattacks by taking ¥{damage}
+niji_no_curtain,Curtain of Rainbow,Removes<br />element of attack
+super_mirror,Super Mirror,Reflects any attack
+hinotama,#Fireball
+koori,#Ice
+taiboku,#Big Tree
+neiro,#Melody,Removes Cold<br />Fever Fog Glory
+iwa,#Rock
+kemuri,#Smoke
+eikou,#Glory
+kiri,#Fog
+zaihou,#Treasure
+honoo,#Flame
+yami,#Darkness
+kaminari,#Thunder
+anun,#Dark Cloud
+shinkirou,#Mirage,Makes an Atk<br />weapon 100%Atk
+rankiryuu,#Turbulence
+utagoe,#Song,Removes<br />all misfortunes
+kaze,#Wind
+aura,#Aura,Doubles Atk<br />of an Atk weapon
+kabe,#Wall
+izumi,#Spring
+ryuusei,#Meteor
+nadare,#Avalanche
+genkaku,#Illusion
+kyuushuu,#Absorption
+dosekiryuu,#Debris Flow
+taki,#Waterfall
+magma,#Magma
+tengokufuu,#Heaven Wind
+kaihou,#Liberation,Calls<br />a guardian god
+hyougaki,#Ice Age
+moon_no_shizuku,Moon Drop
+heart_no_shizuku,Heart Drop
+romance_water,Romance Water
+amanogawa_no_oishii_mizu,Milky Way Water
+moon_no_hana,Moon Flower
+heart_no_hana,Heart Flower
+romance_no_kouboku,Romance Aroma
+tengokusou,Heaven Herb
+moon_no_kaigara,Moon Shell,Removes Cold<br />Fever Fog Glory
+heart_no_kaigara,Heart Shell,Removes<br />all misfortunes
+dokidoki_namida,Nervous Tear,+HP10<br />or 10 damage
+weapon_ko,Weapon Powder
+seirei_no_nuigurumi,Soul Doll
+yozora_no_houki,Night Broom,Sweeps away<br />3 artifacts
+megami_no_sekken,Goddess's Soap,Makes forget<br />2 miracles
+shugofuuin_no_tsubo,Guardian Pot,Calls<br />a guardian god
+ummei_no_himo,String of Fate,Calls<br />a phenomenon
+taiyou_no_omamori,Amulet of the Sun,+HP10 when HP<br />becomes 0
+abunai_usu,Dangerous Mortar,Attracts the<br />Dangerous Pestle
+koakuma,Small Devil,5 damage
+chuuakuma,Medium Devil,10 damage
+daiakuma,Large Devil,15 damage
+itazuraman,Trickman,Steals 1 artifacts
+itazuraman,Trickman,Makes forget 1 miracle
+megumi_san,Megumi-san,+HP1 to 20
+megumi_san,Megumi-san,+MP1 to 20
+megumi_san,Megumi-san,+¥1 to 20

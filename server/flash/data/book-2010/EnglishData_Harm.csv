@@ -1,0 +1,8 @@
+Cold,1 damage in attack turns<br />Next level is Fever
+Fever,2 damage in attack turns<br />Next level is HELL
+Hell Disease,5 damage in attack turns<br />Next level is HEAVEN,HELL
+Heaven Disease,+HP5 in attack turns<br />Next level is HP0,HEAVEN
+Fog,Hides surroundings
+Glory,Only 1 artifact is usable<br />in defense turns
+Illusion,Acts randomly<br />in attack turns at 20%
+Dark Cloud,Received %Atk hit surely

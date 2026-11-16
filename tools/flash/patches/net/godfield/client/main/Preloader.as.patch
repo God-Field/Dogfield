@@ -1,0 +1,19 @@
+--- a/net/godfield/client/main/Preloader.as
++++ b/net/godfield/client/main/Preloader.as
+@@ -1,6 +1,7 @@
+ package net.godfield.client.main
+ {
+    import flash.display.Loader;
++   import net.godfield.client.Path;
+    import flash.events.Event;
+    import flash.events.ProgressEvent;
+    import flash.net.URLRequest;
+@@ -23,7 +24,7 @@
+          new ImageLoader().start();
+          this.contentLoaderInfo.addEventListener(ProgressEvent.PROGRESS,this.splash.onProgress);
+          this.contentLoaderInfo.addEventListener(Event.COMPLETE,this.onComplete);
+-         this.load(new URLRequest("http://www.godfield.net/game/ipamp.swf"),new LoaderContext(true,null,SecurityDomain.currentDomain));
++         this.load(new URLRequest(Path.baseURL + "/flash/ipamp.swf"),new LoaderContext(true));
+       }
+ 
+       private function onComplete(event:Event) : void

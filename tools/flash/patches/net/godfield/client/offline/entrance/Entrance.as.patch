@@ -1,0 +1,69 @@
+--- a/net/godfield/client/offline/entrance/Entrance.as
++++ b/net/godfield/client/offline/entrance/Entrance.as
+@@ -19,50 +19,46 @@
+          var freeFightPrivate2Button:ServerButton = null;
+          var duelButton:ServerButton = null;
+          var spiritButton:ServerButton = null;
+-         var bookButton:BookButton = null;
+          var sharedObject:SharedObject = null;
+          var lotteryButton:Button = null;
+          super();
+          this.addChild(new Image("offline/entrance/background.jpg"));
+-         var y:int = 15;
++         var buttonY:int = 15;
+          var trainingButton:ServerButton = new ServerButton(ServerType.TRAINING);
+-         trainingButton.move(62,y);
++         trainingButton.move(62,buttonY);
+          this.addChild(trainingButton);
+-         y += 95;
++         buttonY += 95;
+          var freeFightButton:ServerButton = new ServerButton(ServerType.FREE_FIGHT);
+-         freeFightButton.move(62,y);
++         freeFightButton.move(62,buttonY);
+          this.addChild(freeFightButton);
+-         y += 95;
++         buttonY += 95;
+          var freeFightPrivateButton:ServerButton = new ServerButton(ServerType.FREE_FIGHT,true);
+-         freeFightPrivateButton.move(62,y);
++         freeFightPrivateButton.move(62,buttonY);
+          this.addChild(freeFightPrivateButton);
+          if(Language.current == Language.JAPANESE)
+          {
+-            y += 95;
++            buttonY += 95;
+             freeFightPrivate2Button = new ServerButton(ServerType.FREE_FIGHT,true,2);
+-            freeFightPrivate2Button.move(62,y);
++            freeFightPrivate2Button.move(62,buttonY);
+             this.addChild(freeFightPrivate2Button);
+          }
+          if(Language.current == Language.JAPANESE || Boolean(Main.instance.clientInfo.userID))
+          {
+-            y += 95;
++            buttonY += 95;
+             duelButton = new ServerButton(ServerType.DUEL);
+-            duelButton.move(62,y);
++            duelButton.move(62,buttonY);
+             this.addChild(duelButton);
+          }
+-         if(Language.current == Language.JAPANESE)
++         if(Language.current == Language.JAPANESE || Boolean(Main.instance.clientInfo.userID))
+          {
+-            y += 95;
++            buttonY += 95;
+             spiritButton = new ServerButton(ServerType.SPIRIT);
+-            spiritButton.move(62,y);
++            spiritButton.move(62,buttonY);
+             this.addChild(spiritButton);
+          }
+-         if(Language.current == Language.JAPANESE)
+-         {
+-            bookButton = new BookButton();
+-            bookButton.move(362,600);
+-            this.addChild(bookButton);
+-         }
++         var bookButton:BookButton = new BookButton();
++         bookButton.move(362,600);
++         this.addChild(bookButton);
+          var logoutButton:Button = new Button("offline/entrance/logout_button",true);
+          logoutButton.addEventListener(MouseEvent.CLICK,this.onClickLogout);
+          logoutButton.move(820,654);

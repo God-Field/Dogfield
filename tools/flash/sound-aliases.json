@@ -1,0 +1,102 @@
+{
+  "evidence": "Literal sound paths from both 2010 clients, plus PowerIncreaseEffect HP/MP/YEN and SoloDefenseEffect block/flick/reflect dynamic paths. Missing names also occur in the 2013 client; substitutes below are functional choices, not verified renames or historical recordings.",
+  "references": [
+    "alert.mp3",
+    "assistant.mp3",
+    "assistant_add.mp3",
+    "assistant_remove.mp3",
+    "block.mp3",
+    "bonus.mp3",
+    "book_tab_down.mp3",
+    "book_tab_over.mp3",
+    "button_down.mp3",
+    "button_over.mp3",
+    "card.mp3",
+    "client_turn.mp3",
+    "counter.mp3",
+    "damage.mp3",
+    "damage_dark.mp3",
+    "dead.mp3",
+    "defense_harm.mp3",
+    "devil.mp3",
+    "disease.mp3",
+    "dying_attack.mp3",
+    "entry_down.mp3",
+    "entry_over.mp3",
+    "entry_toggle_down.mp3",
+    "entry_toggle_over.mp3",
+    "exchange.mp3",
+    "flick.mp3",
+    "game_draw.mp3",
+    "game_start.mp3",
+    "game_start_number.mp3",
+    "game_win.mp3",
+    "harm_add.mp3",
+    "harm_remove.mp3",
+    "hit.mp3",
+    "hp_increase.mp3",
+    "illusion.mp3",
+    "itazuraman.mp3",
+    "item_remove.mp3",
+    "megumi_san.mp3",
+    "miss.mp3",
+    "mortar.mp3",
+    "mp_increase.mp3",
+    "mystery.mp3",
+    "no_change.mp3",
+    "open_cover.mp3",
+    "reflect.mp3",
+    "revive.mp3",
+    "score.mp3",
+    "seizure.mp3",
+    "target.mp3",
+    "toggle_down.mp3",
+    "winner.mp3",
+    "worse.mp3",
+    "yen_absorb.mp3",
+    "yen_increase.mp3",
+    "yen_scatter.mp3"
+  ],
+  "substitutions": {
+    "entry_over.mp3": {
+      "sound": "button_over.mp3",
+      "reason": "Entry-button hover uses the available generic button-hover effect."
+    },
+    "entry_down.mp3": {
+      "sound": "button_down.mp3",
+      "reason": "Entry-button clicks use the available generic button-click effect."
+    },
+    "entry_toggle_down.mp3": {
+      "sound": "toggle_down.mp3",
+      "reason": "Entry selection uses the available generic toggle-click effect."
+    },
+    "bonus.mp3": {
+      "sound": "yen_increase.mp3",
+      "reason": "Currency bonuses use the available currency-increase effect."
+    },
+    "score.mp3": {
+      "sound": "winner.mp3",
+      "reason": "End-game score presentation uses the available winner effect."
+    },
+    "yen_scatter.mp3": {
+      "sound": "yen_increase.mp3",
+      "reason": "Distributed currency gains use the available currency-increase effect."
+    },
+    "devil.mp3": {
+      "sound": "damage.mp3",
+      "reason": "Damaging creatures use the available damage effect."
+    },
+    "itazuraman.mp3": {
+      "sound": "item_remove.mp3",
+      "reason": "Artifact or miracle removal by Trickman uses the available removal effect."
+    },
+    "megumi_san.mp3": {
+      "sound": "hp_increase.mp3",
+      "reason": "Helpful creatures use an available recovery effect, including MP/currency variants."
+    },
+    "illusion.mp3": {
+      "sound": "illusion_item.mp3",
+      "reason": "Random-action Illusion uses the available related Illusion-item effect; these are different gameplay effects."
+    }
+  }
+}

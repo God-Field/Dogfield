@@ -1,0 +1,16 @@
+--- a/net/godfield/client/api/GodFieldAPI.as
++++ b/net/godfield/client/api/GodFieldAPI.as
+@@ -15,12 +15,7 @@
+ 
+       override protected function get url() : String
+       {
+-         var serverType:ServerType = Main.instance.place.serverType;
+-         if(serverType == ServerType.OFFLINE || Constants.IS_TEST)
+-         {
+-            return "http://www.godfield.net/api/";
+-         }
+-         return "http://" + serverType.host + "/api/";
++         return net.godfield.client.Path.baseURL + "/flash/api/";
+       }
+    }
+ }

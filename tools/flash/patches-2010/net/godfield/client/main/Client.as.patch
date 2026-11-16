@@ -1,0 +1,58 @@
+--- a/net/godfield/client/main/Client.as
++++ b/net/godfield/client/main/Client.as
+@@ -55,7 +55,12 @@
+       private function onConnect(event:Event) : void
+       {
+          var xml:XML = Request.LOGIN.toXML();
+-         xml.name = this.info.name;
++         var nameElement:XML = <name/>;
++         nameElement.appendChild(this.info.name);
++         xml.appendChild(nameElement);
++         xml.mode = Main.instance.place.serverType.toString();
++         xml.version = "2010";
++         xml.fcauth = this.info.fcauth;
+          xml.language = Language.current;
+          if(this.info.platform)
+          {
+@@ -65,9 +70,9 @@
+          this.send(xml);
+       }
+ 
+-      private function onCatchError(e:Error) : void
+-      {
+-         this.catchError(e.getStackTrace());
++      private function onCatchError(caughtError:Error) : void
++      {
++         this.catchError(caughtError.toString() + "\n" + caughtError.getStackTrace());
+       }
+ 
+       public function send(xml:XML = null) : void
+@@ -165,11 +170,16 @@
+                }
+                this.moving = false;
+             }
++            if(Response[xml.localName()] == Response.ENTER && xml.room.toXMLString()
++               && (Main.instance.place.map["roomName"] || Main.instance.place.map["room"] || Main.instance.place.map["playerCount"]))
++            {
++               Main.instance.updateContent();
++            }
+             this.receiver.receive(xml);
+          }
+-         catch(error:Error)
+-         {
+-            this.catchError(error.getStackTrace());
++         catch(caughtError:Error)
++         {
++            this.catchError(caughtError.toString() + "\n" + caughtError.getStackTrace());
+          }
+       }
+ 
+@@ -178,7 +188,7 @@
+          var serverType:ServerType = Main.instance.place.serverType;
+          if(!Constants.IS_TEST)
+          {
+-            Security.loadPolicyFile("xmlsocket://" + serverType.host + ":843");
++            Security.loadPolicyFile("xmlsocket://" + serverType.host + ":" + serverType.port);
+          }
+          this.socket = new XMLSocket();
+          this.socket.addEventListener(Event.CONNECT,this.onConnect);

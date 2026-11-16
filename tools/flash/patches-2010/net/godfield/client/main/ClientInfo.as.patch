@@ -1,0 +1,41 @@
+--- a/net/godfield/client/main/ClientInfo.as
++++ b/net/godfield/client/main/ClientInfo.as
+@@ -58,7 +58,8 @@
+ 
+       public function get advanced() : Boolean
+       {
+-         return this.platform == Platform.GOOGLE_FRIEND_CONNECT || Constants.IS_TEST;
++         return this._fcauth != null && this._fcauth.indexOf("dogfield-local-") == 0
++            || this.platform == Platform.GOOGLE_FRIEND_CONNECT || Constants.IS_TEST;
+       }
+ 
+       public function set parameters(value:Object) : void
+@@ -78,7 +79,7 @@
+          var parameters:Object = Main.instance.root.loaderInfo.parameters;
+          if(parameters.language)
+          {
+-            Language.current = Language[parameters.language];
++            Language.current = parameters.language == "ja" ? Language.JAPANESE : parameters.language == "en" ? Language.ENGLISH : Language[parameters.language];
+          }
+          else
+          {
+@@ -106,6 +107,19 @@
+             this._mogeraGID = parameters.mogeraGID;
+             this._mogeraOTP = parameters.mogeraOTP;
+          }
++         var localAccount:SharedObject = SharedObject.getLocal("DogfieldFlash2010Account");
++         if(!localAccount.data.token)
++         {
++            var localToken:String = "dogfield-local-";
++            for(var tokenPartIndex:int = 0; tokenPartIndex < 4; tokenPartIndex++)
++            {
++               localToken += ("00000000" + uint(Math.random() * 4294967296).toString(16)).substr(-8);
++            }
++            localAccount.data.token = localToken;
++            localAccount.flush();
++         }
++         this._fcauth = String(localAccount.data.token);
++         this._valid = true;
+          if(parameters.valid)
+          {
+             this._valid = parameters.valid;

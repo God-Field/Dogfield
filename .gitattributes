@@ -1,0 +1,2 @@
+# Unified diffs preserve empty context lines, including at the end of a hunk.
+tools/flash/**/*.patch whitespace=-blank-at-eol,-blank-at-eof

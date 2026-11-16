@@ -1,0 +1,30 @@
+--- a/net/godfield/client/api/GodFieldAPI.as
++++ b/net/godfield/client/api/GodFieldAPI.as
+@@ -1,6 +1,7 @@
+ package net.godfield.client.api
+ {
+    import cc.charin.api.AbstractAPI;
++   import net.godfield.client.Path;
+    import net.godfield.ServerType;
+    import net.godfield.client.main.Main;
+    import net.godfield.client.main.Place;
+@@ -15,18 +16,7 @@
+ 
+       override protected function get url() : String
+       {
+-         var place:Place = Main.instance.place;
+-         var serverType:ServerType = place.serverType;
+-         if(serverType == ServerType.OFFLINE)
+-         {
+-            return "http://www.godfield.net/api/";
+-         }
+-         if(serverType == ServerType.FREE_FIGHT)
+-         {
+-            return "http://" + serverType.getHost(place.map["isPrivate"],place.map["serverNumber"]) + "/api/";
+-         }
+-         return "http://" + serverType.getHost() + "/api/";
++         return Path.baseURL + "/flash/api/";
+       }
+    }
+ }
+-

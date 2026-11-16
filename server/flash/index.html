@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>God Field Flash</title>
+<style>
+  body { margin: 0; color: #222; background: #eee; font: 16px sans-serif; }
+  main { max-width: 1024px; margin: 24px auto; }
+  h1 { font-size: 24px; }
+  #player { width: 100%; aspect-ratio: 4 / 3; background: white; }
+  ruffle-player { width: 100%; height: 100%; }
+</style>
+<main>
+  <h1>God Field Flash</h1>
+  <p id="status">Loading the Flash client…</p>
+  <div id="player"></div>
+  <p><a href="/flash/godfield.swf">Download the patched SWF</a> · <a href="/">Modern client</a></p>
+</main>
+<script>
+  const parameters = new URLSearchParams(location.search);
+  const version = parameters.get('version');
+  const movie = ['201005', '201008'].includes(version) ? `godfield-${version}.swf` : 'godfield.swf';
+  document.querySelector('a[href="/flash/godfield.swf"]').href = `/flash/${movie}`;
+  const serverURL = parameters.get('serverURL') || location.origin;
+  const endpoint = new URL(serverURL);
+  const socketHost = parameters.get('serverHost') || endpoint.hostname.replace(/^\[|\]$/g, '');
+  const socketPort = Number(parameters.get('serverPort') || 58001);
+  const proxyURL = parameters.get('socketProxy') || `${endpoint.protocol === 'https:' ? 'wss:' : 'ws:'}//${endpoint.host}/flash/socket`;
+  window.RufflePlayer = { config: { autoplay: 'on', unmuteOverlay: 'hidden',
+    socketProxy: [{ host: socketHost, port: socketPort, proxyUrl: proxyURL }] } };
+  const script = document.createElement('script');
+  script.src = '/flash/ruffle/ruffle.js';
+  script.onerror = () => {
+    document.getElementById('status').textContent = 'Ruffle is missing. See docs/FLASH.md for the offline setup or open the downloaded SWF in Flash Projector.';
+  };
+  script.onload = async () => {
+    try {
+      const player = window.RufflePlayer.newest().createPlayer();
+      document.getElementById('player').append(player);
+      await player.ruffle().load({ url: `/flash/${movie}`, parameters: {
+        language: parameters.get('language') || 'en', serverHost: socketHost,
+        serverPort: String(socketPort), serverURL,
+      } });
+      document.getElementById('status').textContent = 'Flash client loaded.';
+    } catch (error) {
+      document.getElementById('status').textContent = String(error);
+    }
+  };
+  document.head.append(script);
+</script>
+</html>

@@ -1,0 +1,57 @@
+--- a/net/godfield/client/main/Client.as
++++ b/net/godfield/client/main/Client.as
+@@ -8,6 +8,7 @@
+    import flash.events.SecurityErrorEvent;
+    import flash.events.TimerEvent;
+    import flash.net.XMLSocket;
++   import net.godfield.client.Path;
+    import flash.system.Security;
+    import flash.utils.Timer;
+    import net.godfield.Language;
+@@ -43,9 +44,9 @@
+          ErrorCatcher.onCatch = this.onCatchError;
+       }
+ 
+-      private function onCatchError(e:Error) : void
+-      {
+-         this.catchError(e.getStackTrace());
++      private function onCatchError(caughtError:Error) : void
++      {
++         this.catchError(caughtError.getStackTrace());
+       }
+ 
+       public function set moving(value:Boolean) : void
+@@ -109,7 +110,7 @@
+             host = serverType.getHost();
+             port = serverType.getPort();
+          }
+-         Security.loadPolicyFile("xmlsocket://" + host + ":843");
++         Security.loadPolicyFile("xmlsocket://" + host + ":" + port);
+          this.socket = new XMLSocket();
+          this.socket.addEventListener(Event.CONNECT,this.onConnect);
+          this.socket.addEventListener(DataEvent.DATA,this.onData);
+@@ -123,8 +124,12 @@
+       {
+          var clientInfo:ClientInfo = Main.instance.clientInfo;
+          var xml:XML = Request.LOGIN.toXML();
+-         xml.name = clientInfo.name;
++         var nameElement:XML = <name/>;
++         nameElement.appendChild(clientInfo.name);
++         xml.appendChild(nameElement);
+          xml.language = Language.current;
++         xml.mode = Main.instance.place.serverType.toString();
++         if(Main.instance.place.map["isPrivate"]) { xml.isPrivate = ""; }
+          if(Boolean(clientInfo.userID))
+          {
+             xml.userID = clientInfo.userID;
+@@ -145,6 +150,10 @@
+          {
+             this.currentXML = null;
+             xml = XML(event.data);
++            if(Response[xml.localName()] == Response.ENTER && Main.instance.place.inRoom)
++            {
++               Main.instance.updateContent();
++            }
+             if(this._moving)
+             {
+                if(Response[xml.localName()] != Response.ENTER)

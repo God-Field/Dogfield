@@ -1,0 +1,117 @@
+{
+  "muchi": {
+    "image": "whip",
+    "category": "weapons",
+    "evidence": "Exact Japanese card name: ムチ"
+  },
+  "nokobunbun": {
+    "image": "saw-boom-boom",
+    "category": "weapons",
+    "evidence": "Exact Japanese card name: のこぶんぶん"
+  },
+  "jet_yo-yo": {
+    "image": "jet-yo-yo",
+    "category": "weapons",
+    "evidence": "Exact Japanese card name: ジェットヨーヨー"
+  },
+  "naginata_classic": {
+    "image": "naginata-classic",
+    "category": "weapons",
+    "evidence": "Exact Japanese card name: なぎなたクラシック"
+  },
+  "final_kiba": {
+    "image": "final-tusk",
+    "category": "weapons",
+    "evidence": "Exact Japanese card name: ファイナル牙"
+  },
+  "gravity_mace": {
+    "image": "gravity-mace",
+    "category": "weapons",
+    "evidence": "Exact Japanese card name: グラビティメイス"
+  },
+  "moro_bukkomi_axe": {
+    "image": "direct-smash-axe",
+    "category": "weapons",
+    "evidence": "Exact Japanese card name: もろぶっこみアクス"
+  },
+  "angel_knife": {
+    "image": "angel-knife",
+    "category": "weapons",
+    "evidence": "Exact Japanese card name: エンゼルナイフ"
+  },
+  "angel_axe": {
+    "image": "angel-axe",
+    "category": "weapons",
+    "evidence": "Exact Japanese card name: エンゼルアクス"
+  },
+  "bokutou": {
+    "image": "wooden-sword",
+    "category": "weapons",
+    "evidence": "Exact Japanese card name: 木刀"
+  },
+  "hagane_no_tate": {
+    "image": "steel-shield",
+    "category": "armor",
+    "evidence": "Exact Japanese card name: はがねの盾"
+  },
+  "hagane_no_yoroi": {
+    "image": "steel-armor",
+    "category": "armor",
+    "evidence": "Exact Japanese card name: はがねのよろい"
+  },
+  "hagane_no_kabuto": {
+    "image": "steel-helm",
+    "category": "armor",
+    "evidence": "Exact Japanese card name: はがねのかぶと"
+  },
+  "core_barrier": {
+    "image": "core-barrier",
+    "category": "armor",
+    "evidence": "Exact Japanese card name: コアバリヤー"
+  },
+  "core_protector": {
+    "image": "core-protector",
+    "category": "armor",
+    "evidence": "Exact Japanese card name: コアプロテクター"
+  },
+  "angel_no_kote": {
+    "image": "angel-gauntlet",
+    "category": "armor",
+    "evidence": "Exact Japanese card name: エンゼルの小手"
+  },
+  "koakuma": {
+    "image": "small-devil",
+    "category": "devils",
+    "evidence": "Exact Japanese card name: 小悪魔"
+  },
+  "chuuakuma": {
+    "image": "medium-devil",
+    "category": "devils",
+    "evidence": "Exact Japanese card name: 中悪魔"
+  },
+  "daiakuma": {
+    "image": "large-devil",
+    "category": "devils",
+    "evidence": "Exact Japanese card name: 大悪魔"
+  },
+  "itazuraman": {
+    "image": "trickster",
+    "category": "devils",
+    "evidence": "Exact Japanese card name: イタズラマン"
+  },
+  "kawa_no_boushi": {
+    "image": "leather-cap",
+    "category": "armor",
+    "evidence": "Leather Cap; 皮の帽子 → 革の帽子 is a spelling change for leather. Both have defense 1 and price 1."
+  },
+  "energy_helm": {
+    "image": "energy-helm",
+    "category": "armor",
+    "evidence": "Energy Helm; エネルギーヘルム → エナジーヘルム changes the transliteration of energy. Both are plain non-elemental helmets; defense/price change from 8/8 in 2010 to 10/10 in HTML5."
+  },
+  "energy_armor": {
+    "image": "energy-armor",
+    "category": "armor",
+    "evidence": "Energy Armor; エネルギーアーマー → エナジーアーマー changes the transliteration of energy. Both are plain non-elemental armor; defense/price change from 9/9 in 2010 to 11/10 in HTML5."
+  }
+}

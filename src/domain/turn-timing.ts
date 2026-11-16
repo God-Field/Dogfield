@@ -1,0 +1,2 @@
+export const PRIVATE_TURN_TIMEOUT_MS = 60 * 1000;
+export const DUEL_TURN_TIMEOUT_MS = 15 * 1000;
