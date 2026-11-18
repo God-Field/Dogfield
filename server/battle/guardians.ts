@@ -3,9 +3,25 @@ import type { Player } from '../types.ts';
 import type { Battle } from './battle.ts';
 import { engine } from '../engine.ts';
 
-// Observed probabilities; see the known approximations in docs/ARCHITECTURE.md.
-const EARTH_DROP_PERCENT = 42;
-const MOON_FULL_MOON_PERCENT = 8;
+// The creator confirmed these uniform catalog draws on Twitter (November 2026).
+// Only obtainable cards participate; Discard and Sacrifice are commands, not gifts.
+export function getEarthItemPool(battle: Battle): ItemDefinition[] {
+  return battle.catalog.filter((definition) => {
+    const isEarthCategory = definition.category === engine.CategoryTrade
+      || definition.category === engine.CategoryWeapons
+      || definition.category === engine.CategoryArmor
+      || definition.category === engine.CategorySundries;
+    return definition.giftRate > 0 && isEarthCategory;
+  });
+}
+
+export function getMoonItemPool(battle: Battle): ItemDefinition[] {
+  return battle.catalog.filter((definition) => {
+    const isExcludedResponse = definition.ability === 'blockWeapon'
+      || definition.ability === 'bounceMiracle';
+    return definition.category === engine.CategoryMiracles && !isExcludedResponse;
+  });
+}
 
 export function getEarthDropPool(battle: Battle): ItemDefinition[] {
   return battle.catalog.filter((itemDefinition) => {
@@ -39,29 +55,11 @@ export function selectGuardianAction(
         itemDefinition.guardian?.key === 'earth' &&
         itemDefinition.ability === 'addItem',
     );
-    if (battle.random.chance('guardianSpecial', EARTH_DROP_PERCENT)) {
-      const droppedItem = battle.pickEarthDropItem();
-      return droppedItem === null
-        ? [dropDefinition]
-        : [dropDefinition, droppedItem];
+    const earthItems = getEarthItemPool(battle);
+    const chosenDefinition = battle.random.pick('guardianItem', earthItems);
+    if (!chosenDefinition.isItemTargetingCommand()) {
+      return [dropDefinition, chosenDefinition];
     }
-    const earthItems = battle.catalog.filter((itemDefinition) => {
-      const isEarthCategory =
-        itemDefinition.category === engine.CategoryTrade
-        || itemDefinition.category === engine.CategoryWeapons
-        || itemDefinition.category === engine.CategorySundries;
-      return itemDefinition.giftRate > 0 &&
-        isEarthCategory &&
-        itemDefinition.isItemTargetingCommand();
-    });
-    if (earthItems.length === 0) {
-      return [dropDefinition];
-    }
-    const chosenDefinition = battle.random.pick(
-      'guardianItem',
-      earthItems,
-      (itemDefinition) => itemDefinition.guardianAttackRate || 1,
-    );
     if (chosenDefinition.ability === 'sell') {
       const saleItems = battle.catalog.filter(
         (itemDefinition) =>
@@ -92,36 +90,12 @@ export function selectGuardianAction(
         itemDefinition.guardian?.key === 'moon' &&
         itemDefinition.ability === 'categoryWeapons',
     );
-    const plusMiracles = battle.catalog.filter(
-      (itemDefinition) =>
-        itemDefinition.category === engine.CategoryMiracles
-        && (itemDefinition.ability === 'doubleAtk'
-          || itemDefinition.ability === 'attackEveryEnemy'),
-    );
-    if (
-      plusMiracles.length !== 0 &&
-      battle.random.chance('moonFullMoon', MOON_FULL_MOON_PERCENT)
-    ) {
-      return [
-        fullMoonBlade,
-        battle.random.pick('guardianItem', plusMiracles),
-      ];
-    }
-    const moonItems = battle.catalog.filter(
-      (itemDefinition) =>
-        itemDefinition.category === engine.CategoryMiracles
-        && itemDefinition.isItemTargetingCommand(),
-    );
-    if (moonItems.length === 0) {
-      return [fullMoonBlade];
-    }
-    return [
-      battle.random.pick(
-        'guardianItem',
-        moonItems,
-        (itemDefinition) => itemDefinition.guardianAttackRate || 1,
-      ),
-    ];
+    const chosenDefinition = battle.random.pick('guardianItem', getMoonItemPool(battle));
+    const needsFullMoonBlade = chosenDefinition.ability === 'doubleAtk'
+      || chosenDefinition.ability === 'attackEveryEnemy';
+    return needsFullMoonBlade
+      ? [fullMoonBlade, chosenDefinition]
+      : [chosenDefinition];
   }
   const guardianItems = battle.catalog.filter(
     (itemDefinition) =>
