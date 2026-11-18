@@ -3,10 +3,9 @@ import type { Player } from '../types.ts';
 /**
  * Rule-based bot policy shared by attacks, targeting, economy, and prayer.
  *
- * The official bot behaves like a utility chooser with a large stochastic
- * component: it rarely maximizes a single stat. These helpers keep the
- * preference terms explicit and game-facing instead of storing observed
- * per-category percentages.
+ * Recorded choices are stochastic and state-dependent. The local utility
+ * weights and strength-group preference approximate those observations;
+ * the creator has not disclosed the official selection code.
  */
 
 export interface BotItem {
@@ -21,6 +20,48 @@ export interface BotItem {
   category: {
     key: string;
   };
+}
+
+type BotTargetPlayer = Pick<Player, 'id' | 'hp' | 'mp' | 'cp' | 'dead'>;
+
+export interface BotTargetContext {
+  actor: BotTargetPlayer;
+  players: readonly BotTargetPlayer[];
+  targets: readonly BotTargetPlayer[];
+}
+
+// Fitted approximation of the creator's private strength grouping, not official
+// coefficients. A soft preference accounts for the unknown scoring and cutoff.
+const TARGET_OPPOSITE_GROUP_WEIGHT = 3;
+
+function botPlayerStrength(player: BotTargetPlayer): number {
+  return player.hp + player.mp / 2 + player.cp / 3;
+}
+
+function applyTargetGroupPreference(
+  probabilities: number[],
+  context?: BotTargetContext,
+): number[] {
+  if (!context || context.targets.length !== probabilities.length) {
+    return probabilities;
+  }
+  const livingPlayers = context.players.filter((player) => !player.dead && player.hp > 0);
+  if (livingPlayers.length < 2) {
+    return probabilities;
+  }
+  const totalStrength = livingPlayers.reduce(
+    (total, player) => total + botPlayerStrength(player),
+    0,
+  );
+  const groupBoundary = totalStrength / livingPlayers.length;
+  const actorIsUpper = botPlayerStrength(context.actor) >= groupBoundary;
+  const weights = probabilities.map((probability, targetIndex) => {
+    const targetIsUpper = botPlayerStrength(context.targets[targetIndex]) >= groupBoundary;
+    const groupWeight = actorIsUpper === targetIsUpper ? 1 : TARGET_OPPOSITE_GROUP_WEIGHT;
+    return probability * groupWeight;
+  });
+  const totalWeight = weights.reduce((total, weight) => total + weight, 0);
+  return weights.map((weight) => weight / totalWeight);
 }
 
 const HEALTH_PREFERENCE_BY_ABILITY: Record<string, number> = {
@@ -64,9 +105,8 @@ function mpNeed(player: Player): number {
 }
 
 /**
- * Relative chance of choosing a target. The weakest/strongest endpoints are
- * not special-cased: they emerge from health preference and the endpoint
- * focus in botTargetProbabilities.
+ * Relative HP-rank preference in the empirical target distribution.
+ * This is separate from the estimated status/group preference.
  */
 export function botTargetWeight(
   rankFraction: number,
@@ -77,13 +117,17 @@ export function botTargetWeight(
 }
 
 /**
- * Target probabilities for a sorted enemy list. The official bot occasionally
- * focuses an endpoint before falling back to its normal utility choice; the
- * focus is a small part of the policy, not a per-category lookup table.
+ * Empirical target probabilities for a sorted enemy list. This approximates
+ * the observed marginal distribution, not the official decision algorithm.
+ * The creator confirmed that the official bot partitions all players by a
+ * private strength score (HP has the largest influence) and attacks the other
+ * group. The endpoint terms below are a surrogate for that undisclosed rule.
+ * See docs/CREATOR-RULES.md for evidence and the limits of reconstruction.
  */
 export function botTargetProbabilities(
   targetHps: readonly number[],
   ability: string,
+  context?: BotTargetContext,
 ): number[] {
   if (targetHps.length === 0) {
     return [];
@@ -108,7 +152,7 @@ export function botTargetProbabilities(
     0,
     1 - TARGET_FOCUS_WEAKEST - TARGET_FOCUS_STRONGEST,
   );
-  return baseWeights.map((weight, rank) => {
+  const probabilities = baseWeights.map((weight, rank) => {
     let probability = (remaining * weight) / totalWeight;
     if (rank === 0) {
       probability += TARGET_FOCUS_WEAKEST;
@@ -118,6 +162,7 @@ export function botTargetProbabilities(
     }
     return probability;
   });
+  return applyTargetGroupPreference(probabilities, context);
 }
 
 const TEAR_SELF_PERCENT_WITH_FEW_PLAYERS = 7;

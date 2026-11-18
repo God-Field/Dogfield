@@ -231,9 +231,16 @@ export function chooseBotTarget(
       firstEnemy.hp - secondEnemy.hp ||
       firstEnemy.id - secondEnemy.id,
   );
+  const actor = battle.game.players.find(
+    (player) => player.id === battle.game.attackTurnPlayerId,
+  );
+  const targetContext = actor
+    ? { actor, players: battle.alive, targets: rankedEnemies }
+    : undefined;
   const probabilities = botTargetProbabilities(
     rankedEnemies.map((enemy) => enemy.hp),
     definition?.ability ?? '',
+    targetContext,
   );
   const candidates = rankedEnemies.map((enemy, rank) => ({
     enemy: enemy,
