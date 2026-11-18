@@ -2676,12 +2676,121 @@ test('Earth directly uses weapons with special effects and sundries that start a
   }
 });
 
+test('Earth applies healing and other self-use effects to its owner', async (t) => {
+  const scenarios = [
+    { itemId: 191, action: 'boostHP', expected: { hp: 45 } },
+    { itemId: 192, action: 'boostHP', expected: { hp: 50 } },
+    { itemId: 193, action: 'boostHP', expected: { hp: 55 } },
+    { itemId: 194, action: 'boostHP', expected: { hp: 60 } },
+    { itemId: 195, action: 'boostMP', expected: { mp: 15 } },
+    { itemId: 196, action: 'boostMP', expected: { mp: 20 } },
+    { itemId: 197, action: 'boostMP', expected: { mp: 25 } },
+    {
+      itemId: 198, action: 'addCurse', expected: { mp: 30, curses: ['heaven'] },
+    },
+    {
+      itemId: 199, action: 'removeCurses', curses: ['fog', 'hell'],
+      expected: { curses: ['hell'] },
+    },
+    {
+      itemId: 200, action: 'removeCurses', curses: ['fog', 'hell'],
+      expected: { curses: [] },
+    },
+    { itemId: 201, action: 'setGuardian', expected: { guardian: 'moon' } },
+    { itemId: 202, action: 'boostHP', expected: { hp: 50 }, tearHeals: true },
+    { itemId: 202, action: 'dealDamage', expected: { hp: 30 }, tearHeals: false },
+    { itemId: 207, action: 'boostHP', expected: { hp: 90 } },
+  ];
+  for (const { itemId, action, expected, curses = [], tearHeals } of scenarios) {
+    const item = getItemDefinition(itemId);
+    await t.test(`${item.name} emits ${action}`, () => {
+      class EarthSelfUseRandom extends Random {
+        chance(label, percent) {
+          if (label === 'guardianAttack') return true;
+          if (label === 'tear') return tearHeals;
+          if (label === 'guardianLeave') return false;
+          return super.chance(label, percent);
+        }
+        pick(label, values, weight) {
+          if (label === 'guardianItem') return values.find((value) => value.id === itemId);
+          if (label === 'guardian') return 'moon';
+          if (label === 'phenomenon') return values.find((value) => value.id === 293);
+          return super.pick(label, values, weight);
+        }
+      }
+      const owner = createPlayerFixture(1, [6]);
+      const enemy = createPlayerFixture(2, [7]);
+      owner.guardian = 'earth';
+      owner.curses = [...curses];
+      enemy.curses = ['fog'];
+      const game = createGameFixture([owner, enemy]);
+      game.attackTurnPlayerId = enemy.id;
+      const battle = new Battle(game, new EarthSelfUseRandom(1));
+      battle.finishTurn({ gift: false });
+
+      const guardianEvent = game.events.find((event) => event.action === 'attackByGuardian');
+      assert.deepEqual(guardianEvent.attack.itemModelIds, [itemId]);
+      assert.ok(game.events.some((event) => event.action === action));
+      assert.equal(game.attacks, undefined);
+      assert.equal(game.attackTurnPlayerId, owner.id);
+      assert.equal(owner.hp, expected.hp ?? 40);
+      assert.equal(owner.mp, expected.mp ?? 10);
+      assert.deepEqual(owner.curses, expected.curses ?? curses);
+      assert.equal(owner.guardian, expected.guardian ?? 'earth');
+      assert.deepEqual([enemy.hp, enemy.mp, enemy.curses], [40, 10, ['fog']]);
+      assert.deepEqual(owner.items.map((slot) => slot.modelId), [6]);
+    });
+  }
+});
+
+test('Earth’s Dangerous Pestle can hit its owner or be intercepted by Dangerous Mortar', async (t) => {
+  for (const hasMortar of [false, true]) {
+    await t.test(hasMortar ? 'Mortar intercepts the strike' : 'Pestle hits its owner', () => {
+      class EarthDangerRandom extends Random {
+        chance(label, percent) {
+          if (label === 'guardianAttack') return true;
+          if (label === 'guardianLeave') return false;
+          return super.chance(label, percent);
+        }
+        pick(label, values, weight) {
+          if (label === 'guardianItem') return values.find((value) => value.id === 94);
+          if (label === 'dangerTarget') {
+            assert.equal(hasMortar, false);
+            return values.find((value) => value.id === 1);
+          }
+          return super.pick(label, values, weight);
+        }
+      }
+      const owner = createPlayerFixture(1, [6]);
+      const enemy = createPlayerFixture(2, [7]);
+      const mortarHolder = createPlayerFixture(3, hasMortar ? [209] : [8]);
+      owner.guardian = 'earth';
+      const game = createGameFixture([owner, enemy, mortarHolder]);
+      game.attackTurnPlayerId = enemy.id;
+      new Battle(game, new EarthDangerRandom(1)).finishTurn({ gift: false });
+
+      assert.equal(game.attacks, undefined);
+      assert.equal(owner.hp, hasMortar ? 40 : 10);
+      assert.equal(enemy.hp, 40);
+      assert.equal(mortarHolder.hp, hasMortar ? 0 : 40);
+      const action = hasMortar ? 'attractDanger' : 'setTargetPlayer';
+      const target = game.events.find((event) => event.action === action);
+      assert.equal(target.playerId, hasMortar ? mortarHolder.id : owner.id);
+      assert.ok(mortarHolder.items.every((slot) => slot.modelId !== 209));
+    });
+  }
+});
+
 test('Earth uses Goddess Soap and Nocturnal Broom on an enemy', async (t) => {
   const scenarios = [
     { name: 'Goddess Soap', itemId: 206, action: 'removeUsedMiracles', removedId: 215 },
     { name: 'Nocturnal Broom', itemId: 205, action: 'removeItems', removedId: 7 },
+    {
+      name: 'Super Mirror reflects Goddess Soap',
+      itemId: 206, action: 'removeUsedMiracles', removedId: 214, reflects: true,
+    },
   ];
-  for (const { name, itemId, action, removedId } of scenarios) {
+  for (const { name, itemId, action, removedId, reflects = false } of scenarios) {
     await t.test(name, () => {
       class EarthRemovalRandom extends Random {
         chance(label, percent) {
@@ -2694,7 +2803,8 @@ test('Earth uses Goddess Soap and Nocturnal Broom on an enemy', async (t) => {
         }
       }
       const owner = createPlayerFixture(1, [214, 6]);
-      const enemy = createPlayerFixture(2, [215, 7]);
+      const enemyHand = reflects ? [215, 7, 190] : [215, 7];
+      const enemy = createPlayerFixture(2, enemyHand);
       owner.guardian = 'earth';
       owner.items[0].used = true;
       enemy.items[0].used = true;
@@ -2706,14 +2816,20 @@ test('Earth uses Goddess Soap and Nocturnal Broom on an enemy', async (t) => {
       assert.deepEqual(game.attacks[0].itemModelIds, [itemId]);
       assert.equal(game.attacks[0].targetPlayerId, enemy.id);
       assert.equal(battle.expectedCommandPlayerId, enemy.id);
-      assert.deepEqual(enemy.items.map((item) => item.modelId), [215, 7]);
-      battle.submit('u2', {});
+      assert.deepEqual(enemy.items.map((item) => item.modelId), enemyHand);
+      battle.submit('u2', reflects ? { itemIds: [3] } : {});
+      if (reflects) {
+        assert.ok(game.events.some((event) => event.action === 'reflect'));
+        assert.equal(battle.expectedCommandPlayerId, owner.id);
+        battle.submit('u1', {});
+      }
 
       const removal = game.events.find((event) => event.action === action);
       assert.deepEqual(removal.items.map((item) => item.modelId), [removedId]);
-      assert.ok(enemy.items.every((item) => item.modelId !== removedId));
-      assert.deepEqual(owner.items.map((item) => item.modelId), [214, 6]);
-      assert.equal(owner.items[0].used, true);
+      const recipient = reflects ? owner : enemy;
+      const otherPlayer = reflects ? enemy : owner;
+      assert.ok(recipient.items.every((item) => item.modelId !== removedId));
+      assert.ok(otherPlayer.items.some((item) => item.used));
     });
   }
 });
