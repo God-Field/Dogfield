@@ -21,7 +21,7 @@ import * as guardians from './guardians.ts';
 import * as defenseEffects from './defense.ts';
 import {
   areEnemies,
-  createEnemyAttackQueue,
+  createAttackQueue,
   selectDirectAttackTarget,
 } from './targets.ts';
 import {
@@ -834,18 +834,6 @@ export class Battle {
       turnProgress.sellingItemId = selectedSlots[1]?.id;
       this.addPlaceholderSlot(player);
     }
-    if (ability === 'callPhenomenon') {
-      const scheduledAttacks = this.applyItemEffect(
-        player,
-        player,
-        firstDefinition,
-        {},
-      );
-      if (!scheduledAttacks) {
-        this.finishTurn();
-      }
-      return;
-    }
     const attack: Attack = {
       playerId: player.id,
       itemModelIds: itemDefinitions.map((itemDefinition) => itemDefinition.id),
@@ -910,111 +898,53 @@ export class Battle {
       firstDefinition,
     );
     const ability = firstDefinition.ability;
-    if (attack.guardian) {
-      const needsDefense = firstDefinition.attack > 0
-        || convertsMPToAttack
-        || ability === 'addCurse'
-        || ability === 'takeCP'
-        || ability === 'boostCPToEnemy'
-        || ability === 'buy'
-        || ability === 'sell';
-      if (!needsDefense) {
-        return false;
-      }
-      return this.resolveGuardianAttack(player, attack, itemDefinitions);
+    const guardian = attack.guardian !== undefined;
+    if (ability === 'callPhenomenon') {
+      return false;
     }
     const everyEnemyCount = itemDefinitions.filter(
       (itemDefinition) => itemDefinition.ability === 'attackEveryEnemy',
     ).length;
-    const needsEnemyQueue = everyEnemyCount > 0 || firstDefinition.hitRate > 0;
-    if (needsEnemyQueue) {
-      const enemies = this.alive.filter((candidatePlayer) =>
-        areEnemies(player, candidatePlayer),
-      );
-      if (enemies.length === 0) {
-        delete this.game.attacks;
-        return false;
-      }
-      this.game.attacks = createEnemyAttackQueue(attack, enemies, this.random, {
-        cycleCount: Math.max(everyEnemyCount, 1),
-        strikesPerTarget: ability === 'attackTwice' ? DOUBLE_ATTACK_FACTOR : 1,
-      });
-      if (ability === 'danger') {
-        this.resolveDanger(this.currentAttack);
-        return true;
-      }
-      this.resolveAttackTarget();
-      return true;
-    }
-    const attacks = ability === 'attackTwice'
-      ? [cloneState(attack), cloneState(attack)]
-      : [attack];
-    if (ability === 'danger') {
-      this.game.attacks = attacks;
-      this.resolveDanger(attack);
-      return true;
-    }
+    const targetsEveryEnemy = everyEnemyCount > 0 || firstDefinition.hitRate > 0;
+    const isDanger = ability === 'danger';
     const hasRedundantCurseRemovalTarget =
       command.targetPlayerId === player.id &&
       (ability === 'removeMildCurses' || ability === 'removeAllCurses');
     const hasExplicitTarget = command.targetPlayerId !== undefined &&
       !hasRedundantCurseRemovalTarget;
-    if (ability === 'exchange') {
+    const needsDirectTarget = firstDefinition.isDirectTargetCommand(guardian)
+      || convertsMPToAttack
+      || (!guardian && (ability === 'boostMPAndAddCurse' || hasExplicitTarget));
+    const needsSingleTarget = ability !== 'exchange' && (isDanger || needsDirectTarget);
+    if (!targetsEveryEnemy && !needsSingleTarget) {
       return false;
     }
-    const needsTarget = firstDefinition.isDirectTargetCommand()
-      || ability === 'boostMPAndAddCurse'
-      || hasExplicitTarget;
-    if (!needsTarget) {
-      return false;
+    let targets: Player[];
+    if (isDanger && !targetsEveryEnemy) {
+      // Danger chooses its recipient when each strike resolves.
+      targets = [player];
+    } else if (targetsEveryEnemy || guardian) {
+      targets = this.alive.filter((candidatePlayer) =>
+        areEnemies(player, candidatePlayer),
+      );
+      if (targets.length === 0) {
+        delete this.game.attacks;
+        return false;
+      }
+      if (!targetsEveryEnemy) {
+        targets = [this.random.pick('guardianTarget', targets)];
+      }
+    } else {
+      targets = [selectDirectAttackTarget(
+        this,
+        player,
+        firstDefinition,
+        command.targetPlayerId,
+      )];
     }
-    this.game.attacks = attacks;
-    const target = selectDirectAttackTarget(
-      this,
-      player,
-      firstDefinition,
-      command.targetPlayerId,
-    );
-    this.currentAttack.targetPlayerId = target.id;
-    if (this.game.attacks.length > 1) {
-      this.game.attacks[1].targetPlayerId = target.id;
-    }
-    this.emit('setTargetPlayer', {
-      playerId: target.id,
-    });
-    if (target.id === player.id) {
-      this.resolveDefenseCommand(player, {}, false);
-    }
-    return true;
-  }
-
-  private resolveGuardianAttack(
-    player: Player,
-    attack: Attack,
-    itemDefinitions: readonly ItemDefinition[],
-  ): boolean {
-    const definition = itemDefinitions[0];
-    const attacksEveryEnemy = itemDefinitions.some(
-      (guardianDefinition) => guardianDefinition.ability === 'attackEveryEnemy',
-    );
-    if (definition.ability === 'danger') {
-      this.game.attacks = [attack];
-      this.resolveDanger(attack);
-      return true;
-    }
-    let targets = this.alive.filter((targetPlayer) =>
-      areEnemies(player, targetPlayer),
-    );
-    if (targets.length === 0) {
-      delete this.game.attacks;
-      return false;
-    }
-    if (definition.hitRate === 0 && !attacksEveryEnemy) {
-      targets = [this.random.pick('guardianTarget', targets)];
-    }
-    this.game.attacks = createEnemyAttackQueue(attack, targets, this.random, {
-      cycleCount: 1,
-      strikesPerTarget: definition.ability === 'attackTwice' ? DOUBLE_ATTACK_FACTOR : 1,
+    this.game.attacks = createAttackQueue(attack, targets, this.random, {
+      cycleCount: Math.max(everyEnemyCount, 1),
+      strikesPerTarget: ability === 'attackTwice' ? DOUBLE_ATTACK_FACTOR : 1,
     });
     this.resolveAttackTarget();
     return true;
@@ -1039,6 +969,13 @@ export class Battle {
   resolveAttackTarget(): void {
     const attack = this.currentAttack;
     const definition = this.attackDefinitions(attack)[0];
+    if (definition.ability === 'danger') {
+      this.emit('danger');
+      if (this.resolveDangerHolder()) {
+        return;
+      }
+      attack.targetPlayerId = this.random.pick('dangerTarget', this.alive).id;
+    }
     const player = this.requirePlayer(attack.targetPlayerId);
     const resolvesWithoutDefense =
       attack.targetPlayerId === attack.playerId || player.dead;
@@ -1082,10 +1019,6 @@ export class Battle {
       this.emit('nextAttack', {
         attack: nextAttack,
       });
-      if (this.attackDefinitions(this.attack)[0].ability === 'danger') {
-        this.resolveDanger(this.attack);
-        return;
-      }
       this.resolveAttackTarget();
       return;
     }
@@ -1267,16 +1200,6 @@ export class Battle {
     );
     this.completeAttack();
     return true;
-  }
-
-  resolveDanger(attack: Attack) {
-    this.emit('danger');
-    if (this.resolveDangerHolder()) {
-      return;
-    }
-
-    attack.targetPlayerId = this.random.pick('dangerTarget', this.alive).id;
-    this.resolveAttackTarget();
   }
 
   resolvePhenomenon(

@@ -3,9 +3,9 @@ import type { Attack, Player } from '../types.ts';
 import type { Random } from '../random.ts';
 import type { Battle } from './battle.ts';
 
-export function createEnemyAttackQueue(
+export function createAttackQueue(
   attack: Attack,
-  enemies: readonly Player[],
+  candidates: readonly Player[],
   random: Random,
   { cycleCount, strikesPerTarget }: {
     cycleCount: number;
@@ -18,7 +18,7 @@ export function createEnemyAttackQueue(
   // same target twice in a row before moving to the next AOE target.
   const attacks: Attack[] = [];
   for (let cycleIndex = 0; cycleIndex < cycleCount; cycleIndex++) {
-    let targets = [...enemies];
+    let targets = [...candidates];
     if (targets.length > 1) {
       targets = random.shuffle('targetOrder', targets);
     }
@@ -30,6 +30,7 @@ export function createEnemyAttackQueue(
       ) {
         attacks.push({
           ...attack,
+          itemModelIds: [...attack.itemModelIds],
           targetPlayerId: candidatePlayer.id,
         });
       }

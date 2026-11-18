@@ -2676,6 +2676,34 @@ test('Earth directly uses weapons with special effects and sundries that start a
   }
 });
 
+test('Earth uses Goddess Soap on its owner without opening enemy defense', () => {
+  class EarthSoapRandom extends Random {
+    chance(label, percent) {
+      if (label === 'guardianAttack') return true;
+      return super.chance(label, percent);
+    }
+    pick(label, values, weight) {
+      if (label === 'guardianItem') return values.find((value) => value.id === 206);
+      return super.pick(label, values, weight);
+    }
+  }
+  const owner = createPlayerFixture(1, [214, 6]);
+  const enemy = createPlayerFixture(2, [215, 6]);
+  owner.guardian = 'earth';
+  owner.items[0].used = true;
+  enemy.items[0].used = true;
+  const game = createGameFixture([owner, enemy]);
+  game.attackTurnPlayerId = 2;
+  new Battle(game, new EarthSoapRandom(1)).finishTurn({ gift: false });
+
+  assert.equal(game.attacks, undefined);
+  assert.equal(game.attackTurnPlayerId, owner.id);
+  assert.equal(owner.items.some((item) => item.used), false);
+  assert.equal(enemy.items[0].used, true);
+  const removal = game.events.find((event) => event.action === 'removeUsedMiracles');
+  assert.deepEqual(removal.items.map((item) => item.modelId), [214]);
+});
+
 test('Earth Drop conjures armor or a non-targeting sundry', () => {
   const owner = createPlayerFixture(1, [6]);
   owner.guardian = 'earth';

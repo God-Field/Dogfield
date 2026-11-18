@@ -22,6 +22,8 @@ const directTargetAbilities: ReadonlySet<string> = new Set([
   'boostCPToEnemy',
   'takeCP',
   'addCurse',
+]);
+const playerTargetAbilities: ReadonlySet<string> = new Set([
   'removeItems',
   'removeUsedMiracles',
 ]);
@@ -159,15 +161,17 @@ export class ItemDefinition {
    * True for commands resolved against a chosen target through the fixed-target
    * branch: weapons/damaging actions and targeted economic or status abilities.
    * Random hit-rate actions are handled by the separate random-target branch.
+   * Guardian utility effects such as Broom and Soap apply to their owner.
    */
-  isDirectTargetCommand(): boolean {
+  isDirectTargetCommand(guardian = false): boolean {
     if (this.hitRate > 0) {
       return false;
     }
-    if (this.attack > 0 || this.category === CategoryWeapons) {
+    if (this.attack > 0 || (!guardian && this.category === CategoryWeapons)) {
       return true;
     }
-    return directTargetAbilities.has(this.ability);
+    return directTargetAbilities.has(this.ability)
+      || (!guardian && playerTargetAbilities.has(this.ability));
   }
 
   getWeaponResponseAction(itemCategory: Category, filter: ItemElement | null): string | null {
