@@ -1,6 +1,6 @@
 import { createServer as createTcpServer, type Server as TcpServer, type Socket } from 'node:net';
 import { StringDecoder } from 'node:string_decoder';
-import { WebSocketServer, type WebSocket } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import type { IncomingMessage, Server as HttpServer } from 'node:http';
 import { FlashService } from './service.ts';
 import { element, tag } from './xml.ts';
