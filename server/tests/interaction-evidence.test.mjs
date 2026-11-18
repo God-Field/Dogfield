@@ -120,7 +120,7 @@ test('setElement and plus cards produce the logged damage', () => {
   assert.equal(defender.hp, 25);
 });
 
-test('Dreaming Hat defense keeps a performed miracle through redraw', () => {
+test('Dreaming Hat defense redraws a performed miracle slot', () => {
   const attacker = createPlayer(1, [6]);
   const defender = createPlayer(2, [178, 214, 6]);
   defender.items[1].used = true;
@@ -128,9 +128,12 @@ test('Dreaming Hat defense keeps a performed miracle through redraw', () => {
   const battle = new Battle(game, new Random(3));
   submitAttack(battle, game, 'u1', [1], 2);
   battle.submit('u2', { itemIds: [1] });
-  const performed = defender.items.find((item) => item.modelId === 214);
-  assert.ok(performed);
-  assert.equal(performed.used, true);
+  const redraw = game.events.find((event) => event.action === 'replaceItems');
+  const replacement = redraw.items.find((item) => item.id === 1);
+  assert.ok(replacement.modelId > 0);
+  assert.notEqual(replacement.modelId, 214);
+  assert.equal(replacement.used, undefined);
+  assert.ok(defender.items.every((item) => !item.used));
   assert.ok(
     game.events.some((event) => event.action === 'redraw'),
     'Dreaming Hat should redraw ordinary cards',

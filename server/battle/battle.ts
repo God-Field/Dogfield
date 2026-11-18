@@ -1163,7 +1163,7 @@ export class Battle {
     }
     const redrawnItems: Slot[] = [];
     for (const itemSlot of player.items) {
-      if (isPlaceholderSlot(itemSlot) || itemSlot.used) {
+      if (isPlaceholderSlot(itemSlot)) {
         redrawnItems.push(itemSlot);
         continue;
       }

@@ -3132,24 +3132,15 @@ test('Magnetic Storm shuffles every living card and re-applies Dream', () => {
   }
 });
 
-test('Dreaming Hat redraw leaves performed miracles untouched', () => {
+test('Dreaming Hat redraw replaces performed miracles with unused cards', () => {
   const player = createPlayerFixture(1, [214, 6, 113]);
   const battle = new Battle(createGameFixture([player]), new Random(1));
   player.items[0].used = true;
-  const before = {
-    id: player.items[0].id,
-    modelId: player.items[0].modelId,
-    used: player.items[0].used,
-  };
   battle.resolveRedraw(player);
-  assert.deepEqual(
-    {
-      id: player.items.find((itemSlot) => itemSlot.id === before.id).id,
-      modelId: player.items.find((itemSlot) => itemSlot.id === before.id).modelId,
-      used: player.items.find((itemSlot) => itemSlot.id === before.id).used,
-    },
-    before,
-  );
+  const replacement = player.items.find((itemSlot) => itemSlot.id === 1);
+  assert.ok(replacement.modelId > 0);
+  assert.notEqual(replacement.modelId, 214);
+  assert.equal(replacement.used, undefined);
   assert.notEqual(player.items.find((itemSlot) => itemSlot.id === 2).modelId, 6);
   assert.notEqual(player.items.find((itemSlot) => itemSlot.id === 3).modelId, 113);
 });
