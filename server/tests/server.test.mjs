@@ -2497,15 +2497,18 @@ test('Earth and Moon guardians conjure cards without consuming the hand', () => 
     }
     chance(label, percent) {
       if (label === 'guardianAttack') return true;
-      if (label === 'guardianSpecial') return this.useDrop;
-      if (label === 'moonFullMoon') return this.useFullMoon;
       return super.chance(label, percent);
     }
     pick(label, values, weight) {
       if (label === 'guardianItem') {
-        const chosen = values.find(
-          (value) => value.id === this.itemModelId || value.id === this.plusModelId,
-        );
+        let chosenModelId = this.itemModelId;
+        if (this.useDrop) {
+          chosenModelId = this.dropModelId;
+        }
+        if (this.useFullMoon) {
+          chosenModelId = this.plusModelId;
+        }
+        const chosen = values.find((value) => value.id === chosenModelId);
         if (chosen !== undefined) return chosen;
       }
       if (label === 'guardianDropItem') {
@@ -2597,7 +2600,6 @@ test('Moon guardian uses Full Moon Blade after Apocalypse', () => {
   class FullMoonRandom extends Random {
     chance(label, percent) {
       if (label === 'guardianAttack') return true;
-      if (label === 'moonFullMoon') return true;
       return super.chance(label, percent);
     }
     pick(label, values, weight) {
@@ -2667,7 +2669,6 @@ test('Earth guardian does not conjure Discard or Sacrifice', () => {
   class EarthItemRandom extends Random {
     chance(label, percent) {
       if (label === 'guardianAttack') return true;
-      if (label === 'guardianSpecial') return false;
       return super.chance(label, percent);
     }
     pick(label, values, weight) {
@@ -2712,7 +2713,6 @@ test('Earth guardian Buy and Sell resolve through the trade flow', () => {
     }
     chance(label, percent) {
       if (label === 'guardianAttack') return true;
-      if (label === 'guardianSpecial') return false;
       return super.chance(label, percent);
     }
     pick(label, values, weight) {
@@ -2776,7 +2776,6 @@ test('Earth Exchange is a random self-exchange that preserves the stat total', (
   class ExchangeRandom extends Random {
     chance(label, percent) {
       if (label === 'guardianAttack') return true;
-      if (label === 'guardianSpecial') return false;
       return super.chance(label, percent);
     }
     pick(label, values, weight) {
@@ -2891,7 +2890,6 @@ test('guardian Earth Buy emits canNotBuy when the owner is poor', () => {
   class PoorEarthBuyRandom extends Random {
     chance(label, percent) {
       if (label === 'guardianAttack') return true;
-      if (label === 'guardianSpecial') return false;
       return super.chance(label, percent);
     }
     pick(label, values, weight) {

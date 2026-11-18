@@ -166,9 +166,6 @@ class EarthMagicalStickRandom extends Random {
     if (label === 'guardianAttack') {
       return true;
     }
-    if (label === 'guardianSpecial') {
-      return false;
-    }
     return super.chance(label, percent);
   }
 

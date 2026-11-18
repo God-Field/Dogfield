@@ -16,6 +16,7 @@ import '../server/tests/ai-names.test.mjs';
 import '../server/tests/attack-combinations.test.mjs';
 import '../server/tests/battle-regressions.test.mjs';
 import '../server/tests/bot-policy.test.mjs';
+import '../server/tests/creator-rules.test.mjs';
 import '../server/tests/duel-rating.test.mjs';
 import '../server/tests/http.test.mjs';
 import '../server/tests/flash.test.mjs';

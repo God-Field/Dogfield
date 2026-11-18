@@ -359,20 +359,16 @@ test('sale overflow includes performed miracles', () => {
   assert.equal(buyer.items.some((item) => item.modelId === 227), false);
 });
 
-// Official: broom-long4/game-7, u110, u114, u122, u123, u138 and three other
-// full-hand Earth Drop cases displaced an unused card while a performed
-// miracle stayed in hand.
-test('guardian add overflow keeps performed miracles', () => {
+// The creator confirmed that performed miracles remain eligible for every overflow.
+// Earlier Drop samples happened to select unused cards; they did not prove protection.
+test('guardian add overflow can displace a performed miracle', () => {
   const player = createPlayer(1, [211, ...Array(17).fill(113)]);
   player.items[0].used = true;
   const game = createGame([player, createPlayer(2)]);
   const slot = new Battle(game, new FixtureRandom()).addSlot(player, 146);
-  assert.equal(slot.overflowItem.modelId, 113);
-  assert.notEqual(slot.overflowItem.used, true);
-  assert.equal(
-    player.items.some((item) => item.modelId === 211 && item.used),
-    true,
-  );
+  assert.equal(slot.overflowItem.modelId, 211);
+  assert.equal(slot.overflowItem.used, true);
+  assert.equal(player.items.some((item) => item.modelId === 211), false);
 });
 
 // Official states never contain a used item with a fake model: using a
@@ -841,7 +837,6 @@ test('a lethal Earth Exchange dies before the gift phase', () => {
   class ExchangeGuardianRandom extends Random {
     chance(label) {
       if (label === 'guardianAttack') return true;
-      if (label === 'guardianSpecial') return false;
       return super.chance(label, 0);
     }
     pick(label, values) {
@@ -968,10 +963,8 @@ test('queued attacks still resolve after their target dies', () => {
   assert.equal(dyingTarget.dead, true);
 });
 
-// Official evidence for this exact state is still missing. These tests lock
-// the current local fallback and are explicitly not claims of official
-// behavior.
-test('guardian Buy into 18 performed miracles displaces one (current fallback)', () => {
+// The creator explicitly confirmed Buy/Drop overflow includes performed miracles.
+test('guardian Buy into 18 performed miracles displaces one', () => {
   const buyer = createPlayer(1, Array(18).fill(214));
   for (const itemSlot of buyer.items) itemSlot.used = true;
   buyer.cp = 20;
@@ -997,9 +990,7 @@ test('guardian Buy into 18 performed miracles displaces one (current fallback)',
   );
 });
 
-// Mixed full-hand purchase overflow is extrapolated from the observed sale
-// overflow path; no official purchase sample reaches this state.
-test('a mixed full-hand purchase can displace a performed miracle (sale analogy)', () => {
+test('a mixed full-hand purchase can displace a performed miracle', () => {
   const buyer = createPlayer(1, [214, ...Array(17).fill(113)]);
   buyer.items[0].used = true;
   buyer.cp = 20;
@@ -1019,10 +1010,7 @@ test('a mixed full-hand purchase can displace a performed miracle (sale analogy)
   assert.equal(buyer.items.length, 18);
 });
 
-// Guardian Drop uses the non-performed overflow pool when any ordinary card
-// exists, but falls back to all cards when every slot is performed. The latter
-// is current local behavior, not an official observation.
-test('guardian Drop with only performed cards displaces one (current fallback)', () => {
+test('guardian Drop with only performed cards displaces one', () => {
   const player = createPlayer(1, Array(18).fill(214));
   for (const itemSlot of player.items) itemSlot.used = true;
   const slot = new Battle(
