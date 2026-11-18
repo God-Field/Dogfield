@@ -61,20 +61,12 @@ export function selectGuardianAction(
       return [dropDefinition, chosenDefinition];
     }
     if (chosenDefinition.ability === 'sell') {
-      const saleItems = battle.catalog.filter(
-        (itemDefinition) =>
-          itemDefinition.giftRate > 0
-          && (itemDefinition.category === engine.CategoryTrade
-            || itemDefinition.category === engine.CategoryWeapons
-            || itemDefinition.category === engine.CategoryArmor
-            || itemDefinition.category === engine.CategorySundries),
-      );
-      if (saleItems.length !== 0) {
+      if (earthItems.length !== 0) {
         return [
           chosenDefinition,
           battle.random.pick(
             'guardianSaleItem',
-            saleItems,
+            earthItems,
             (itemDefinition) => itemDefinition.giftRate,
           ),
         ];
