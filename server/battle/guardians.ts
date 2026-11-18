@@ -24,16 +24,9 @@ export function getMoonItemPool(battle: Battle): ItemDefinition[] {
 }
 
 export function getEarthDropPool(battle: Battle): ItemDefinition[] {
-  return battle.catalog.filter((itemDefinition) => {
-    if (itemDefinition.giftRate <= 0) {
-      return false;
-    }
-    if (itemDefinition.category === engine.CategoryArmor) {
-      return true;
-    }
-    return itemDefinition.category === engine.CategorySundries
-      && !itemDefinition.isItemTargetingCommand();
-  });
+  return getEarthItemPool(battle).filter(
+    (definition) => !definition.isItemTargetingCommand(),
+  );
 }
 
 export function pickEarthDropItem(battle: Battle): ItemDefinition | null {
@@ -48,29 +41,30 @@ export function selectGuardianAction(
   // ordinary guardian's five item rates total 20, so the raw rate is an
   // equivalent weight for its 10-30% action distribution.
   if (player.guardian === 'earth') {
-    const dropDefinition = requireGuardianDefinition(
-      battle,
-      'Earth Drop guardian card',
-      (itemDefinition) =>
-        itemDefinition.guardian?.key === 'earth' &&
-        itemDefinition.ability === 'addItem',
-    );
     const earthItems = getEarthItemPool(battle);
-    const chosenDefinition = battle.random.pick('guardianItem', earthItems);
+    const chosenDefinition = battle.pickFromPool('guardianItem', earthItems);
+    if (chosenDefinition === null) {
+      return null;
+    }
     if (!chosenDefinition.isItemTargetingCommand()) {
+      const dropDefinition = requireGuardianDefinition(
+        battle,
+        'Earth Drop guardian card',
+        (itemDefinition) =>
+          itemDefinition.guardian?.key === 'earth' &&
+          itemDefinition.ability === 'addItem',
+      );
       return [dropDefinition, chosenDefinition];
     }
     if (chosenDefinition.ability === 'sell') {
-      if (earthItems.length !== 0) {
-        return [
-          chosenDefinition,
-          battle.random.pick(
-            'guardianSaleItem',
-            earthItems,
-            (itemDefinition) => itemDefinition.giftRate,
-          ),
-        ];
-      }
+      return [
+        chosenDefinition,
+        battle.random.pick(
+          'guardianSaleItem',
+          earthItems,
+          (itemDefinition) => itemDefinition.giftRate,
+        ),
+      ];
     }
     return [chosenDefinition];
   }

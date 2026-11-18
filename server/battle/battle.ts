@@ -997,6 +997,11 @@ export class Battle {
     const attacksEveryEnemy = itemDefinitions.some(
       (guardianDefinition) => guardianDefinition.ability === 'attackEveryEnemy',
     );
+    if (definition.ability === 'danger') {
+      this.game.attacks = [attack];
+      this.resolveDanger(attack);
+      return true;
+    }
     let targets = this.alive.filter((targetPlayer) =>
       areEnemies(player, targetPlayer),
     );
@@ -1006,13 +1011,11 @@ export class Battle {
     }
     if (definition.hitRate === 0 && !attacksEveryEnemy) {
       targets = [this.random.pick('guardianTarget', targets)];
-    } else if (targets.length > 1) {
-      targets = this.random.shuffle('targetOrder', targets);
     }
-    this.game.attacks = targets.map((target) => ({
-      ...attack,
-      targetPlayerId: target.id,
-    }));
+    this.game.attacks = createEnemyAttackQueue(attack, targets, this.random, {
+      cycleCount: 1,
+      strikesPerTarget: definition.ability === 'attackTwice' ? DOUBLE_ATTACK_FACTOR : 1,
+    });
     this.resolveAttackTarget();
     return true;
   }
@@ -1453,7 +1456,9 @@ export class Battle {
       if (this.resolveItemAttack(player, attack, definitions)) {
         return true;
       }
-      this.applyItemEffect(player, player, definition, attack);
+      if (this.applyItemEffect(player, player, definition, attack)) {
+        return true;
+      }
     }
     return false;
   }

@@ -2624,6 +2624,58 @@ test('Moon guardian uses Full Moon Blade after Apocalypse', () => {
   assert.equal(game.attacks?.length, 2, 'Mirage targets every enemy');
 });
 
+test('Earth directly uses weapons with special effects and sundries that start an attack', async (t) => {
+  const scenarios = [
+    {
+      name: 'Saw Boom Boom strikes twice',
+      itemId: 14, attackIds: [14], strikes: 2, remainingHP: 34,
+    },
+    {
+      name: 'Dangerous Pestle uses its danger effect',
+      itemId: 94, attackIds: [94], strikes: 1, remainingHP: 10,
+    },
+    {
+      name: 'String of Fate waits for Black Hole to resolve',
+      itemId: 207, attackIds: [207, 292], strikes: 1, remainingHP: 0,
+    },
+  ];
+  for (const { name, itemId, attackIds, strikes, remainingHP } of scenarios) {
+    await t.test(name, () => {
+      class EarthActionRandom extends Random {
+        chance(label, percent) {
+          if (label === 'guardianAttack' || label === 'hit') return true;
+          return super.chance(label, percent);
+        }
+        pick(label, values, weight) {
+          if (label === 'guardianItem') return values.find((value) => value.id === itemId);
+          if (label === 'dangerTarget') return values.find((value) => value.id === 2);
+          if (label === 'phenomenon') return values.find((value) => value.id === 292);
+          return super.pick(label, values, weight);
+        }
+      }
+      const owner = createPlayerFixture(1, [6]);
+      const enemy = createPlayerFixture(2, [6]);
+      owner.guardian = 'earth';
+      const game = createGameFixture([owner, enemy]);
+      game.attackTurnPlayerId = 2;
+      const battle = new Battle(game, new EarthActionRandom(1));
+      battle.finishTurn({ gift: false });
+      const guardianEvent = game.events.find((event) => event.action === 'attackByGuardian');
+      assert.deepEqual(guardianEvent.attack.itemModelIds, [itemId]);
+      if (itemId === 94) {
+        assert.ok(game.events.some((event) => event.action === 'danger'));
+      }
+      assert.deepEqual(game.attacks.map((attack) => attack.itemModelIds), Array(strikes).fill(attackIds));
+      assert.equal(enemy.hp, 40);
+      for (let strike = 0; strike < strikes; strike++) {
+        battle.submit('u2', {});
+      }
+      assert.equal(enemy.hp, remainingHP);
+      assert.deepEqual(owner.items.map((slot) => slot.modelId), [6]);
+    });
+  }
+});
+
 test('Earth Drop conjures armor or a non-targeting sundry', () => {
   const owner = createPlayerFixture(1, [6]);
   owner.guardian = 'earth';
