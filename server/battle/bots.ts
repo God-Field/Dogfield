@@ -217,10 +217,8 @@ export function chooseBotBuyDecision(
   offerModelId: number,
 ): boolean {
   const definition = battle.getItemDefinition(offerModelId);
-  return battle.random.chance(
-    'botBuy',
-    botBuyAcceptancePercent(definition),
-  );
+  // The creator confirmed that each card has a fixed acceptance decision.
+  return botBuyAcceptancePercent(definition) === 100;
 }
 
 export function chooseBotTarget(
