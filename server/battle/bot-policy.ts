@@ -414,26 +414,26 @@ export function botDefenseForgivePercent(
 }
 
 /** Recorded purchase choices follow card roles and price limits, without a roll. */
-export function botBuyAcceptancePercent(item: BotItem): number {
+export function botShouldAcceptBuy(item: BotItem): boolean {
   if (UNWANTED_PURCHASE_ABILITIES.has(item.ability)) {
-    return 0;
+    return false;
   }
   if (item.category.key === 'weapons') {
     const isCheap = item.price < BUY_WEAPON_PRICE_LIMIT;
     const isValuableEffect = VALUABLE_WEAPON_ABILITIES.has(item.ability);
-    return isCheap || item.isPlusAttack || isValuableEffect ? 100 : 0;
+    return isCheap || item.isPlusAttack || isValuableEffect;
   }
   if (item.category.key === 'armor') {
     const isCheap = item.price <= BUY_ARMOR_PRICE_LIMIT;
     const isStrongAndAffordable = item.defense >= BUY_STRONG_ARMOR_MIN_DEFENSE
       && item.price <= BUY_STRONG_ARMOR_PRICE_LIMIT;
-    return isCheap || isStrongAndAffordable ? 100 : 0;
+    return isCheap || isStrongAndAffordable;
   }
   if (item.category.key === 'sundries') {
-    return item.ability === '' ? 0 : 100;
+    return item.ability !== '';
   }
   if (item.category.key === 'trade' || item.category.key === 'miracles') {
-    return 100;
+    return true;
   }
-  return 0;
+  return false;
 }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Battle } from '../battle/battle.ts';
 import { getItemDefinition } from '../engine.ts';
 import { Random } from '../random.ts';
-import { botBuyAcceptancePercent } from '../battle/bot-policy.ts';
+import { botShouldAcceptBuy } from '../battle/bot-policy.ts';
 
 const createPlayer = (id, items = []) => ({
   id,
@@ -810,11 +810,11 @@ test('prayer competes only with affordable legal openings', () => {
 
 test('purchase rules generalize by item properties and never draw random values', () => {
   const weapon = { ...getItemDefinition(6), id: 9001, price: 10 };
-  assert.equal(botBuyAcceptancePercent(weapon), 0);
-  assert.equal(botBuyAcceptancePercent({ ...weapon, isPlusAttack: true }), 100);
+  assert.equal(botShouldAcceptBuy(weapon), false);
+  assert.equal(botShouldAcceptBuy({ ...weapon, isPlusAttack: true }), true);
   const armor = { ...getItemDefinition(113), id: 9002, price: 15, defense: 8 };
-  assert.equal(botBuyAcceptancePercent(armor), 0);
-  assert.equal(botBuyAcceptancePercent({ ...armor, defense: 9 }), 100);
+  assert.equal(botShouldAcceptBuy(armor), false);
+  assert.equal(botShouldAcceptBuy({ ...armor, defense: 9 }), true);
 
   class NoPurchaseRollRandom extends Random {
     value(label) {

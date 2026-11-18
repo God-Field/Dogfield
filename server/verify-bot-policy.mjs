@@ -17,7 +17,7 @@ import { resolve } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import {
   botAttackWeight,
-  botBuyAcceptancePercent,
+  botShouldAcceptBuy,
   botDefenseForgivePercent,
   botDefenseChoiceWeight,
   botPrayerWeight,
@@ -747,21 +747,17 @@ for await (const episode of readGzipLines(episodePath)) {
 
   if (episode.kind === 'buy') {
     const definition = getItemDefinition(episode.offeredItemModelId);
-    const chance = botBuyAcceptancePercent(
-      definitionItem(definition),
-    );
+    const predicted = botShouldAcceptBuy(definitionItem(definition));
     const observed = episode.bought === true;
     addCount(buyCounts, 'rows');
     addCount(buyCounts, 'observed', observed ? 1 : 0);
-    addCount(buyCounts, 'predicted', chance / 100);
-    if (chance === 0 || chance === 100) {
-      addCount(buyCounts, 'deterministic');
-      addCount(buyCounts, 'disagreements', observed !== (chance === 100) ? 1 : 0);
-    }
+    addCount(buyCounts, 'predicted', predicted ? 1 : 0);
+    addCount(buyCounts, 'deterministic');
+    addCount(buyCounts, 'disagreements', observed !== predicted ? 1 : 0);
     const key = `${definition.category.key}|${episode.priceBucket}`;
     addCount(buyByCategory, `rows|${key}`);
     addCount(buyByCategory, `observed|${key}`, observed ? 1 : 0);
-    addCount(buyByCategory, `predicted|${key}`, chance / 100);
+    addCount(buyByCategory, `predicted|${key}`, predicted ? 1 : 0);
     const affordable = episode.affordableByCp === true ? 'yes' : 'no';
     addCount(buyByAffordability, `rows|${affordable}`);
     addCount(buyByAffordability, `observed|${affordable}`, observed ? 1 : 0);

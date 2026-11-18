@@ -4,7 +4,7 @@ import type { Battle } from './battle.ts';
 import { engine } from '../engine.ts';
 import {
   botAttackWeight as botItemAttackWeight,
-  botBuyAcceptancePercent,
+  botShouldAcceptBuy,
   botDefenseChoiceWeight,
   botDefenseFollowUpPercent,
   botDefenseForgivePercent,
@@ -218,7 +218,7 @@ export function chooseBotBuyDecision(
 ): boolean {
   const definition = battle.getItemDefinition(offerModelId);
   // The creator confirmed that each card has a fixed acceptance decision.
-  return botBuyAcceptancePercent(definition) === 100;
+  return botShouldAcceptBuy(definition);
 }
 
 export function chooseBotTarget(
