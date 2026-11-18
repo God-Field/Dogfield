@@ -8,6 +8,14 @@ This page summarizes how closely Dogfield follows the HTML5 client and server. T
 - The item catalog, translations, and published rules follow the in-game reference data.
 - Battle validation, card effects, combinations, curses, guardians, phenomena, and event ordering are implemented in the shared engine and server, with local regression coverage for many interactions.
 
+## Creator-confirmed rules
+
+- Earth and Moon use uniform card draws; their Drop and Full Moon Blade rates follow from the eligible pools.
+- Full-hand overflow selects uniformly from all occupied slots, including performed miracles.
+- Bot purchase acceptance is fixed by card. Official attack targeting uses opposite strength groups; its exact scoring remains private.
+
+[Creator clarification and recorded-game audit](CREATOR-RULES.md) documents the implementation, distributions, supporting logs, and remaining limits.
+
 ## Strongly supported
 
 - Training bot names follow the official generator across supported locales.
@@ -16,7 +24,7 @@ This page summarizes how closely Dogfield follows the HTML5 client and server. T
 
 ## Approximate
 
-- Bot card selection, defense choices, and targeting approximate observed decisions. Exact weights and the official random stream are unknown.
+- Bot card selection and defense choices approximate observed decisions. Targeting adds a measured status/group preference to the empirical distribution; the private official strength formula and exact probabilities remain unknown.
 - Undocumented random choices and timing boundaries use the current local model; they are not established by Bible text or client code alone.
 - Player-count expiry and inactivity handling follow observed windows, but are not a complete recreation of the production presence system.
 

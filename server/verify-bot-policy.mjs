@@ -33,10 +33,10 @@ const episodePath = resolve(
   refactorRoot,
   'logs/live/campaigns/bot-policy/raw/episodes.jsonl.gz',
 );
-const targetPath = resolve(
-  refactorRoot,
-  'logs/live/campaigns/bot-targeting-audit/raw/target-decisions.jsonl.gz',
-);
+const targetArgument = process.argv.find((argument) => argument.startsWith('--targets='));
+const targetPath = targetArgument
+  ? resolve(targetArgument.slice('--targets='.length))
+  : resolve(refactorRoot, 'logs/live/campaigns/bot-targeting-audit/raw/target-decisions.jsonl.gz');
 const split = process.argv.find((argument) => argument.startsWith('--split='))
   ?.slice('--split='.length) ?? 'all';
 if (!['all', 'training', 'validation'].includes(split)) {
@@ -188,6 +188,7 @@ targetLookupKeys.clear();
 // Target selection
 // ---------------------------------------------------------------------------
 
+const targetLikelihood = { rows: 0, groupContextRows: 0, negativeLogLikelihood: 0, previousNegativeLogLikelihood: 0 };
 const targetByRank = new Map();
 const targetByN = new Map();
 const targetByCategory = new Map();
@@ -229,10 +230,29 @@ for await (const decision of readGzipLines(targetPath)) {
   if (targetRank < 0) {
     continue;
   }
+  // MP must be reconstructed from source events; post-update episode stats
+  // include costs and effects that happened after the targeting decision.
+  const players = decision.mp_fwd
+    ? Object.entries(decision.hp_fwd).map(([playerId, hp]) => ({
+      id: Number(playerId), hp,
+      mp: decision.mp_fwd[playerId] ?? 0,
+      cp: decision.cp_fwd[playerId] ?? 0,
+      dead: decision.dead_fwd[playerId] ?? false,
+    }))
+    : [];
+  const actor = players.find((player) => player.id === decision.actor);
+  const targets = enemies.map(([playerId]) => players.find((player) => player.id === playerId));
+  const context = actor && targets.every(Boolean) ? { actor, players, targets } : undefined;
   const probabilities = botTargetProbabilities(
     enemies.map(([, hp]) => hp),
     ability,
+    context,
   );
+  const previousProbabilities = botTargetProbabilities(enemies.map(([, hp]) => hp), ability);
+  targetLikelihood.rows++;
+  targetLikelihood.groupContextRows += context ? 1 : 0;
+  targetLikelihood.negativeLogLikelihood -= Math.log(Math.max(probabilities[targetRank], Number.EPSILON));
+  targetLikelihood.previousNegativeLogLikelihood -= Math.log(Math.max(previousProbabilities[targetRank], Number.EPSILON));
   const rankCounts = targetByRank;
   addCount(rankCounts, `obs|${targetRank}`);
   probabilities.forEach((probability, rank) => {
@@ -1034,7 +1054,14 @@ function sellSummary() {
 
 const report = {
   split,
-  target: targetSummary(),
+  target: {
+    ...targetSummary(),
+    decisionLikelihood: {
+      ...targetLikelihood,
+      negativeLogLikelihood: targetLikelihood.negativeLogLikelihood / Math.max(1, targetLikelihood.rows),
+      previousNegativeLogLikelihood: targetLikelihood.previousNegativeLogLikelihood / Math.max(1, targetLikelihood.rows),
+    },
+  },
   attack: attackSummary(),
   defense: {
     ...rateSummary(defenseCounts),

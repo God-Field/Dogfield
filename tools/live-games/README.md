@@ -19,3 +19,14 @@ node tools/live-games/run-parallel.mjs \
 The scripts use the shared engine to decode state and validate commands. `play-game.mjs --help` and `run-parallel.mjs --help` list the current options. Other scripts under this directory run protocol, Duel, player-count, disconnect, and Dream probes; invoke each with `--help` where supported.
 
 `analyze.mjs` and the other analyzers read saved logs without contacting the service. The oracle and bot verifiers are documented in [Architecture](../../docs/ARCHITECTURE.md#checks).
+
+## Creator-rule audit
+
+`analyze-creator-rules.mjs` reopens the existing guardian/overflow source logs,
+replays guardian selections with recorded draws, and samples local distributions.
+`analyze-creator-statistics.py` evaluates those counts (SciPy required).
+`reconstruct-target-mp.mjs` enriches targeting records with event-replayed MP,
+keeping only updates whose final MP matches the authoritative snapshot. Pass its
+output to `server/verify-bot-policy.mjs --targets=...` for the group-aware audit.
+These tools are offline research tools and are separate from automated tests.
+See [the creator-rule audit](../../docs/CREATOR-RULES.md) for commands and limits.
