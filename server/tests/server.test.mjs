@@ -2676,32 +2676,46 @@ test('Earth directly uses weapons with special effects and sundries that start a
   }
 });
 
-test('Earth uses Goddess Soap on its owner without opening enemy defense', () => {
-  class EarthSoapRandom extends Random {
-    chance(label, percent) {
-      if (label === 'guardianAttack') return true;
-      return super.chance(label, percent);
-    }
-    pick(label, values, weight) {
-      if (label === 'guardianItem') return values.find((value) => value.id === 206);
-      return super.pick(label, values, weight);
-    }
-  }
-  const owner = createPlayerFixture(1, [214, 6]);
-  const enemy = createPlayerFixture(2, [215, 6]);
-  owner.guardian = 'earth';
-  owner.items[0].used = true;
-  enemy.items[0].used = true;
-  const game = createGameFixture([owner, enemy]);
-  game.attackTurnPlayerId = 2;
-  new Battle(game, new EarthSoapRandom(1)).finishTurn({ gift: false });
+test('Earth uses Goddess Soap and Nocturnal Broom on an enemy', async (t) => {
+  const scenarios = [
+    { name: 'Goddess Soap', itemId: 206, action: 'removeUsedMiracles', removedId: 215 },
+    { name: 'Nocturnal Broom', itemId: 205, action: 'removeItems', removedId: 7 },
+  ];
+  for (const { name, itemId, action, removedId } of scenarios) {
+    await t.test(name, () => {
+      class EarthRemovalRandom extends Random {
+        chance(label, percent) {
+          if (label === 'guardianAttack') return true;
+          return super.chance(label, percent);
+        }
+        pick(label, values, weight) {
+          if (label === 'guardianItem') return values.find((value) => value.id === itemId);
+          return super.pick(label, values, weight);
+        }
+      }
+      const owner = createPlayerFixture(1, [214, 6]);
+      const enemy = createPlayerFixture(2, [215, 7]);
+      owner.guardian = 'earth';
+      owner.items[0].used = true;
+      enemy.items[0].used = true;
+      const game = createGameFixture([owner, enemy]);
+      game.attackTurnPlayerId = enemy.id;
+      const battle = new Battle(game, new EarthRemovalRandom(1));
+      battle.finishTurn({ gift: false });
 
-  assert.equal(game.attacks, undefined);
-  assert.equal(game.attackTurnPlayerId, owner.id);
-  assert.equal(owner.items.some((item) => item.used), false);
-  assert.equal(enemy.items[0].used, true);
-  const removal = game.events.find((event) => event.action === 'removeUsedMiracles');
-  assert.deepEqual(removal.items.map((item) => item.modelId), [214]);
+      assert.deepEqual(game.attacks[0].itemModelIds, [itemId]);
+      assert.equal(game.attacks[0].targetPlayerId, enemy.id);
+      assert.equal(battle.expectedCommandPlayerId, enemy.id);
+      assert.deepEqual(enemy.items.map((item) => item.modelId), [215, 7]);
+      battle.submit('u2', {});
+
+      const removal = game.events.find((event) => event.action === action);
+      assert.deepEqual(removal.items.map((item) => item.modelId), [removedId]);
+      assert.ok(enemy.items.every((item) => item.modelId !== removedId));
+      assert.deepEqual(owner.items.map((item) => item.modelId), [214, 6]);
+      assert.equal(owner.items[0].used, true);
+    });
+  }
 });
 
 test('Earth Drop conjures armor or a non-targeting sundry', () => {
