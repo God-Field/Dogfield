@@ -19,9 +19,11 @@
  *   node --import tsx server/verify-logs.mjs --logs=... --report=/tmp/report.json
  *   node --import tsx server/verify-logs.mjs --oracle
  */
-import { existsSync } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
-import { gunzipSync } from 'node:zlib';
+import { createGunzip, gunzipSync } from 'node:zlib';
+import { createInterface } from 'node:readline';
+import { pipeline } from 'node:stream/promises';
 import { resolve, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Battle } from './battle/battle.ts';
@@ -665,6 +667,37 @@ async function readLogText(path) {
     : contents.toString('utf8');
 }
 
+const replayRecordTypes = new Set([
+  'channel', 'state', 'identity', 'meta', 'request', 'decision', 'rejected',
+]);
+
+async function readLogRows(file) {
+  try {
+    return parseJsonLines(await readLogText(file));
+  } catch (error) {
+    if (error.code !== 'ERR_STRING_TOO_LONG') {
+      throw error;
+    }
+  }
+
+  // Large exports can exceed V8's maximum string size even if each row fits.
+  const rows = [];
+  const streams = [createReadStream(file)];
+  if (file.endsWith('.gz')) {
+    streams.push(createGunzip());
+  }
+  await pipeline(...streams, async (input) => {
+    const lines = createInterface({ input, crlfDelay: Infinity });
+    for await (const line of lines) {
+      const [row] = parseJsonLines(line);
+      if (replayRecordTypes.has(row?.type)) {
+        rows.push(row);
+      }
+    }
+  });
+  return rows;
+}
+
 async function findLogFiles(directory) {
   let entries;
   try {
@@ -685,6 +718,34 @@ async function findLogFiles(directory) {
     }),
   );
   return nested.flat();
+}
+
+function groupLogRowsByGame(rows) {
+  const groups = new Map();
+  for (const row of rows) {
+    const group = groups.get(row.gameId) ?? [];
+    group.push(row);
+    groups.set(row.gameId, group);
+  }
+  const identifiedGames = groups.size - Number(groups.has(undefined));
+  // A single-game log can contain account metadata without a game ID.
+  return identifiedGames > 1 ? groups.values() : [rows];
+}
+
+async function* readGameLogs(files, readableFiles, unreadableFiles) {
+  for (const file of files) {
+    let rows;
+    try {
+      rows = await readLogRows(file);
+    } catch (error) {
+      unreadableFiles.push({ file: relative('.', file), error: error.message });
+      continue;
+    }
+    readableFiles.add(file);
+    for (const gameRows of groupLogRowsByGame(rows)) {
+      yield { file, rows: removeStaleChannels(gameRows) };
+    }
+  }
 }
 
 function ignoredPath(path) {
@@ -973,6 +1034,20 @@ function checkSnapshotStructure(previousGame, nextGame, context, summary) {
 }
 
 
+function createReplayBattle(before, random) {
+  const battle = new Battle(structuredClone(before), random);
+  const pendingModelId = battle.attack?.buyingItemModelId;
+  if (pendingModelId && battle.game.serverTurn?.buyingItemId === undefined) {
+    const offer = battle.game.events?.findLast(
+      (event) => event.action === 'buy' && event.item?.modelId === pendingModelId,
+    );
+    if (Number.isInteger(offer?.item?.id)) {
+      (battle.game.serverTurn ??= {}).buyingItemId = offer.item.id;
+    }
+  }
+  return battle;
+}
+
 function compareReplay({
   before,
   command,
@@ -984,7 +1059,7 @@ function compareReplay({
   const randomSource = useOracle
     ? new OracleRandom(nextGame.events ?? [], nextGame, context, before)
     : new AuditRandom();
-  const battle = new Battle(structuredClone(before), randomSource);
+  const battle = createReplayBattle(before, randomSource);
   if (randomSource instanceof OracleRandom) {
     randomSource.attach(battle);
   }
@@ -1129,7 +1204,7 @@ function compareRejectedCommand({
   context,
   summary,
 }) {
-  const battle = new Battle(structuredClone(before), new AuditRandom());
+  const battle = createReplayBattle(before, new AuditRandom());
   let localStatus = 200;
   summary.rejectedCommandTransitions++;
 
@@ -1163,6 +1238,7 @@ function summarize(summary, fileStats, rootNames) {
     rawSnapshotFiles: fileStats.raw,
     stateSnapshotFiles: fileStats.state,
     skippedFiles: fileStats.skipped,
+    unreadableFiles: fileStats.unreadable,
     transitions: summary.transitions,
     boundaryTransitions: summary.boundaryTransitions,
     comparedTransitions: summary.comparedTransitions,
@@ -1187,32 +1263,26 @@ const useOracle = process.argv.includes('--oracle');
 async function main() {
   const logArgument = process.argv.find((argument) =>
     argument.startsWith('--logs='));
-  const logRoots = (
-    logArgument
-      ? logArgument.slice('--logs='.length).split(',')
-      : ['logs', '../godfield-refactor/logs']
-  ).filter((path) => existsSync(path));
+  const requestedRoots = logArgument?.slice('--logs='.length).split(',');
+  const logRoots = (requestedRoots ?? ['logs', '../godfield-refactor/logs'])
+    .filter((path) => existsSync(path));
+  if (logRoots.length === 0 || (requestedRoots && logRoots.length !== requestedRoots.length)) {
+    const missingRoots = (requestedRoots ?? ['logs', '../godfield-refactor/logs'])
+      .filter((path) => !existsSync(path));
+    throw new Error(`Log directories not found: ${missingRoots.join(', ')}`);
+  }
   const reportPath = process.argv.find((argument) =>
     argument.startsWith('--report='))?.slice('--report='.length);
 
   const summary = createComparisonSummary();
   const files = (await Promise.all(logRoots.map(findLogFiles))).flat();
   const seenTransitions = new Set();
-  const fileStats = {
-    processed: 0,
-    raw: 0,
-    state: 0,
-    skipped: 0,
-  };
+  const readableFiles = new Set();
+  const rawFiles = new Set();
+  const stateFiles = new Set();
+  const unreadableFiles = [];
 
-  for (const file of files) {
-    let rows;
-    try {
-      rows = parseJsonLines(await readLogText(file));
-    } catch {
-      continue;
-    }
-    rows = removeStaleChannels(rows);
+  for await (const { file, rows } of readGameLogs(files, readableFiles, unreadableFiles)) {
     const rawSnapshots = buildSnapshotMap(
       rows,
       (record) =>
@@ -1224,15 +1294,12 @@ async function main() {
     );
     const hasRawSnapshots = rawSnapshots.size > 0;
     const hasStateSnapshots = stateSnapshots.size > 0;
-    if (!hasRawSnapshots && !hasStateSnapshots) {
-      fileStats.skipped++;
-      continue;
-    }
-    fileStats.processed++;
     if (hasRawSnapshots) {
-      fileStats.raw++;
+      rawFiles.add(file);
+    } else if (hasStateSnapshots) {
+      stateFiles.add(file);
     } else {
-      fileStats.state++;
+      continue;
     }
 
     const snapshotMap = hasRawSnapshots ? rawSnapshots : stateSnapshots;
@@ -1464,7 +1531,15 @@ async function main() {
     }
   }
 
-  const report = summarize(summary, fileStats, logRoots);
+  const raw = rawFiles.size;
+  const state = [...stateFiles].filter((file) => !rawFiles.has(file)).length;
+  const report = summarize(summary, {
+    processed: raw + state,
+    raw,
+    state,
+    skipped: readableFiles.size - raw - state,
+    unreadable: unreadableFiles,
+  }, logRoots);
   if (reportPath) {
     await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
   }
@@ -1478,6 +1553,8 @@ export {
   checkSnapshotStructure,
   createComparisonSummary,
   compareRejectedCommand,
+  createReplayBattle,
+  groupLogRowsByGame,
   indexRejectedCommandUsers,
   takeRejectedCommandUser,
 };

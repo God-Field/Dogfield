@@ -8,9 +8,54 @@ import {
   checkSnapshotStructure,
   createComparisonSummary,
   compareRejectedCommand,
+  createReplayBattle,
+  groupLogRowsByGame,
   indexRejectedCommandUsers,
   takeRejectedCommandUser,
 } from '../verify-logs.mjs';
+
+test('merged logs keep overlapping snapshot update counts in separate games', () => {
+  const meta = { type: 'meta' };
+  const first = { type: 'state', gameId: 'first', updateCount: 1 };
+  const second = { type: 'state', gameId: 'second', updateCount: 1 };
+  const firstNext = { ...first, updateCount: 2 };
+  const secondNext = { ...second, updateCount: 2 };
+
+  const rows = [meta, first, second, secondNext, firstNext];
+  assert.deepEqual([...groupLogRowsByGame(rows)], [
+    [meta], [first, firstNext], [second, secondNext],
+  ]);
+  assert.deepEqual([...groupLogRowsByGame([meta, first])], [[meta, first]]);
+});
+
+test('oracle replay reconstructs the offered slot before a declined Buy', () => {
+  const before = {
+    players: [
+      { id: 1, userId: 'buyer', hp: 40, mp: 10, cp: 20, items: [] },
+      { id: 2, userId: 'seller', hp: 40, mp: 10, cp: 20, items: [
+        { id: 1, modelId: 6 },
+      ] },
+    ],
+    gf: 1,
+    attackTurnPlayerId: 1,
+    updateCount: 1,
+    events: [
+      { action: 'useDefenseItems' },
+      { action: 'buy', item: { id: 2, modelId: 113 } },
+    ],
+    attacks: [{ playerId: 1, targetPlayerId: 2, itemModelIds: [5], buyingItemModelId: 113 }],
+  };
+  const battle = createReplayBattle(before);
+  battle.submit('buyer', { bought: false });
+  assert.deepEqual(battle.game.events[0], {
+    action: 'setBought', item: { id: 2, modelId: 113 },
+  });
+  assert.deepEqual(battle.game.players[1].items, [
+    { id: 1, modelId: 6 },
+    { id: 2, modelId: 113 },
+  ]);
+  assert.equal(before.serverTurn, undefined);
+});
 
 test('rejected submissions compare command acceptance without changing the snapshot', () => {
   const before = {
