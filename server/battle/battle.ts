@@ -258,14 +258,12 @@ export class Battle {
     player: Player,
     modelId: number,
     fillPlaceholder = true,
-    includePerformedMiracles = false,
   ): inventory.ItemAcquisition {
     return inventory.addSlot(
       this,
       player,
       modelId,
       fillPlaceholder,
-      includePerformedMiracles,
     );
   }
 

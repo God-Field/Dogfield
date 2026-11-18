@@ -62,7 +62,7 @@ export function confirmPurchase(battle: Battle, buyer: Player, command: Command)
   if (bought) {
     battle.applyStatChange(buyer, 'cp', -definition.price);
     battle.applyStatChange(seller, 'cp', definition.price);
-    slot = battle.addSlot(buyer, definition.id, false, true);
+    slot = battle.addSlot(buyer, definition.id, false);
   } else {
     requireValue(offeredItemId !== undefined);
     const restoredItem: Slot = {
@@ -105,7 +105,7 @@ export function resolveSale(
     insertItemSlot(buyer, item);
     slot = { item };
   } else {
-    slot = battle.addSlot(buyer, definition.id, false, true);
+    slot = battle.addSlot(buyer, definition.id, false);
   }
   battle.emit('sell', slot);
 }

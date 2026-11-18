@@ -98,7 +98,6 @@ export function addSlot(
   player: Player,
   modelId: number,
   fillPlaceholder = true,
-  includePerformedMiracles = false,
 ): ItemAcquisition {
   const items = getOccupiedItemSlots(player);
   const placeholderIndex = findPlaceholderIndex(player);
@@ -114,11 +113,8 @@ export function addSlot(
     player.items.length >= engine.MAX_ITEM_SLOTS &&
     !replacesFullHandPlaceholder;
   if (hasFullOccupiedHand || hasNoSpaceForExtraSlot) {
-    const unusedItems = items.filter((itemSlot) => !itemSlot.used);
-    let overflowCandidates = unusedItems;
-    if (includePerformedMiracles || overflowCandidates.length === 0) {
-      overflowCandidates = items.length !== 0 ? items : player.items;
-    }
+    // Performed miracles have the same overflow probability as every other card.
+    const overflowCandidates = items.length !== 0 ? items : player.items;
     overflowItem = battle.random.pick(
       'overflowItem',
       overflowCandidates,
