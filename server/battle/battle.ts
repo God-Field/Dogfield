@@ -212,17 +212,19 @@ export class Battle {
   }
 
   applyStatChange(player: Player, field: Stat, amount: number) {
-    if (field === 'hp') {
-      Object.assign(player, engine.changeHp(player.hp, amount));
-    }
-    if (field === 'mp') {
-      Object.assign(player, engine.changeMp(player.hp, player.mp, amount));
-    }
-    if (field === 'cp') {
-      Object.assign(
-        player,
-        engine.changeCp(player.hp, player.mp, player.cp, amount),
-      );
+    switch (field) {
+      case 'hp':
+        Object.assign(player, engine.changeHp(player.hp, amount));
+        break;
+      case 'mp':
+        Object.assign(player, engine.changeMp(player.hp, player.mp, amount));
+        break;
+      case 'cp':
+        Object.assign(
+          player,
+          engine.changeCp(player.hp, player.mp, player.cp, amount),
+        );
+        break;
     }
   }
 
