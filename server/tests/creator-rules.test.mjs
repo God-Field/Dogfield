@@ -166,6 +166,21 @@ test('bot strength scoring uses all three statuses with HP weighted highest', ()
   })[0], afterCurrency[0]);
 });
 
+test('direct curse spells choose the upper group in larger lobbies', () => {
+  const actor = { id: 1, hp: 60, mp: 10, cp: 20 };
+  const targets = [10, 30, 50, 80].map((hp, index) => ({
+    id: index + 2, hp, mp: 10, cp: 20,
+  }));
+  const context = { actor, players: [actor, ...targets], targets };
+  const curseSpell = botTargetProbabilities(targets.map(({ hp }) => hp), 'addCurse', context);
+  const ordinaryAttack = botTargetProbabilities(targets.map(({ hp }) => hp), '', context);
+
+  assert.deepEqual(curseSpell.slice(0, 2), [0, 0]);
+  assert.ok(curseSpell.slice(2).every((probability) => probability > 0));
+  assert.ok(ordinaryAttack.slice(0, 2).every((probability) => probability > 0));
+  assert.deepEqual(ordinaryAttack.slice(2), [0, 0]);
+});
+
 test('a guardian can change the direction of an attack', () => {
   const actor = { id: 1, hp: 45, mp: 10, cp: 20 };
   const weaker = { id: 2, hp: 20, mp: 10, cp: 20, guardian: undefined };

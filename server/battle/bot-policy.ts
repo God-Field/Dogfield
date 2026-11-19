@@ -80,6 +80,26 @@ function applyTargetGroupBoundary(
   const scores = livingPlayers.map((player) => botPlayerStrength(player.id === actor.id ? actor : player));
   const scoreSum = scores.reduce((sum, score) => sum + score, 0);
   const actorScore = botPlayerStrength(actor);
+  if (ability === 'addCurse' && livingPlayers.length >= 4) {
+    if (scores.every((score) => score === actorScore)) {
+      return probabilities.map(() => 1 / probabilities.length);
+    }
+    const meanScore = scoreSum / livingPlayers.length;
+    const tieSides = new Map<number, number>();
+    const groupSide = (score: number, playerId: number): number => {
+      if (score !== meanScore) return score > meanScore ? 1 : -1;
+      if (!tieSides.has(playerId)) {
+        tieSides.set(playerId, context.drawExactTieBoundary?.() ? 1 : -1);
+      }
+      return tieSides.get(playerId)!;
+    };
+    const weights = probabilities.map((probability, targetIndex) => {
+      const target = context.targets[targetIndex];
+      return groupSide(botPlayerStrength(target), target.id) === 1 ? probability : 0;
+    });
+    const totalWeight = weights.reduce((total, weight) => total + weight, 0);
+    return totalWeight === 0 ? weights : weights.map((weight) => weight / totalWeight);
+  }
   // With three living players, the highest strength tier forms the singleton
   // focused group and everyone else forms the opposing group.
   if (livingPlayers.length === 3) {

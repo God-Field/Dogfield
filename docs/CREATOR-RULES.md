@@ -346,34 +346,39 @@ players, the highest strength tier is one group and the rest are the
 other; with four or more, the roster mean divides the groups. A bot can
 target only an enemy on the opposite side, except when a score lies
 exactly on the randomized boundary or the legal-target fallback is
-needed.
+needed. There is one measured exception: for direct `addCurse` spells
+in lobbies of four or more, the bot targets the upper group regardless
+of its own side. That target was above the mean in 183/194 held-out
+Dogfield choices and 165/168 Refactor choices; the training splits
+showed 623/673 and 578/604. Weapons that apply a curse on damage
+(`addCurseOnDamage`) do not follow this branch.
 
 The bot chooses a direct target after finalizing the attack cards. It
 scores the attacker with MP remaining after the full attack cost, or
 zero MP for `atkBy2xMP`. The projection does not change live MP before
 submission. Strength is `3 × HP + 2 × MP + CP + 90` for a guardian,
 minus 20 per disease curse and another 60 for Heaven. With the shared
-group boundary, runtime support is 5,902 of 6,718 held-out Dogfield
-choices and 3,681 of 4,123 Refactor choices (88.40% combined). For
-status-reconstructed decisions with a determinate side, the recorded
-target is across the inferred boundary in 8,347 of 9,848 held-out
-choices (89.05%), after excluding forced two-player attacks and exact
+group boundary, runtime support is 5,958 of 6,718 held-out Dogfield
+choices and 3,728 of 4,123 Refactor choices (89.35% combined). For
+status-reconstructed decisions with a determinate group, the recorded
+target follows the applicable group rule in 8,927 of 9,914 held-out
+choices (90.04%), after excluding forced two-player attacks and exact
 boundary ties. This breaks down to 705/762 and 87/92 in three-player
-games, plus 4,536/5,181 and 3,500/3,879 in larger lobbies. A training-only
+games, plus 4,588/5,181 and 3,547/3,879 in larger lobbies. A training-only
 refit of the additive score did not improve these held-out rates. The
 verifier still breaks runtime support down by attack ability.
 
 Refitting HP, MP, currency, and guardian weights on the post-cost
 snapshots retained the simple `3:2:1` weights and 90-point guardian
 bonus. In three-player games, putting the highest strength tier alone
-opposite the other two matches 682/758 held-out Dogfield choices and
-86/91 Refactor choices after excluding exact top-score ties. The older
+opposite the other two matches 705/762 held-out Dogfield choices and
+87/92 Refactor choices after excluding exact top-score ties. The older
 actor-relative rule allowed a middle player to attack the weakest;
 that choice is now excluded because both are in the lower group under
 this split. The larger-lobby mean boundary remains less certain, with
-about one in six status-reconstructed choices crossing the same inferred
-group. The score refit and simple threshold variants did not remove that
-residual.
+about one in ten status-reconstructed choices crossing the inferred
+groups after the curse-spell branch. The score refit and simple threshold
+variants did not remove that residual.
 
 The scoring candidates were explored on training games. Validation games are
 held out by SHA-256 game ID, using the bot verifier's existing 20% split.
