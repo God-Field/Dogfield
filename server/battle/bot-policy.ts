@@ -426,6 +426,7 @@ const BUY_STRONG_ARMOR_PRICE_LIMIT = 15;
 
 // Logistic fit on training games; whole games are held out for evaluation.
 const DEFENSE_FORGIVE_INTERCEPT = 2.0;
+const DEFENSE_FORGIVE_MIN_PERCENT = 1.5;
 const DEFENSE_FORGIVE_DAMAGE = -0.4;
 const DEFENSE_FORGIVE_LEGAL_OPTIONS = -0.5;
 const DEFENSE_FORGIVE_SPECIAL = 0.4;
@@ -499,7 +500,10 @@ export function botDefenseForgivePercent(
   if (attackCategory === 'trade') {
     logOdds += DEFENSE_FORGIVE_TRADE;
   }
-  return 100 / (1 + Math.exp(-logOdds));
+  return Math.max(
+    DEFENSE_FORGIVE_MIN_PERCENT,
+    100 / (1 + Math.exp(-logOdds)),
+  );
 }
 
 /** Recorded purchase choices follow card roles and price limits, without a roll. */
