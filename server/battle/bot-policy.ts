@@ -424,19 +424,17 @@ const BUY_ARMOR_PRICE_LIMIT = 10;
 const BUY_STRONG_ARMOR_MIN_DEFENSE = 9;
 const BUY_STRONG_ARMOR_PRICE_LIMIT = 15;
 
-// Calibrated on complete legal defense records, with whole games held out.
-const DEFENSE_FORGIVE_FLOOR = 3;
-const DEFENSE_FORGIVE_RANGE = 94;
-const DEFENSE_BASE_LOG_ODDS = 2.25;
-const DEFENSE_DAMAGE_LOG_ODDS = 0.41;
-const DEFENSE_OPTION_LOG_ODDS = 0.86;
-const DEFENSE_SPECIAL_LOG_ODDS = 0.60;
-const DEFENSE_FULL_COVERAGE_LOG_ODDS = 0.07;
-const DEFENSE_LETHAL_LOG_ODDS = 1.45;
-const DEFENSE_EFFECT_LOG_ODDS = 3.37;
-const DEFENSE_MIRACLE_LOG_ODDS = -0.64;
-const DEFENSE_GUARDIAN_LOG_ODDS = -0.75;
-const DEFENSE_TRADE_LOG_ODDS = 1.37;
+// Logistic fit on training games; whole games are held out for evaluation.
+const DEFENSE_FORGIVE_INTERCEPT = 2.0;
+const DEFENSE_FORGIVE_DAMAGE = -0.4;
+const DEFENSE_FORGIVE_LEGAL_OPTIONS = -0.5;
+const DEFENSE_FORGIVE_SPECIAL = 0.4;
+const DEFENSE_FORGIVE_COVERED = 0.1;
+const DEFENSE_FORGIVE_LETHAL = -0.6;
+const DEFENSE_FORGIVE_ZERO_DAMAGE = -2.7;
+const DEFENSE_FORGIVE_MIRACLE = -0.6;
+const DEFENSE_FORGIVE_GUARDIAN = -0.2;
+const DEFENSE_FORGIVE_TRADE = 0.7;
 const DARKNESS_FULL_COVERAGE_FORGIVE_PERCENT = 1.5;
 const DEFENSE_FOLLOW_UP_PERCENT = 50;
 
@@ -477,32 +475,31 @@ export function botDefenseForgivePercent(
   if (damage > 0 && bestDefense >= damage && attackElement === 'darkness') {
     return DARKNESS_FULL_COVERAGE_FORGIVE_PERCENT;
   }
-  let logOdds = DEFENSE_BASE_LOG_ODDS
-    - Math.min(damage, 15) * DEFENSE_DAMAGE_LOG_ODDS
-    - Math.log1p(legalCount) * DEFENSE_OPTION_LOG_ODDS;
+  let logOdds = DEFENSE_FORGIVE_INTERCEPT
+    + Math.min(damage, 15) * DEFENSE_FORGIVE_DAMAGE
+    + Math.log1p(legalCount) * DEFENSE_FORGIVE_LEGAL_OPTIONS;
   if (hasSpecialDefense) {
-    logOdds += DEFENSE_SPECIAL_LOG_ODDS;
+    logOdds += DEFENSE_FORGIVE_SPECIAL;
   }
-  if (bestDefense >= damage) {
-    logOdds -= DEFENSE_FULL_COVERAGE_LOG_ODDS;
+  if (damage > 0 && bestDefense >= damage) {
+    logOdds += DEFENSE_FORGIVE_COVERED;
   }
   if (lethal) {
-    logOdds -= DEFENSE_LETHAL_LOG_ODDS;
+    logOdds += DEFENSE_FORGIVE_LETHAL;
   }
   if (damage === 0) {
-    logOdds -= DEFENSE_EFFECT_LOG_ODDS;
+    logOdds += DEFENSE_FORGIVE_ZERO_DAMAGE;
   }
   if (attackCategory === 'miracles') {
-    logOdds += DEFENSE_MIRACLE_LOG_ODDS;
+    logOdds += DEFENSE_FORGIVE_MIRACLE;
   }
   if (attackCategory === 'guardians') {
-    logOdds += DEFENSE_GUARDIAN_LOG_ODDS;
+    logOdds += DEFENSE_FORGIVE_GUARDIAN;
   }
   if (attackCategory === 'trade') {
-    logOdds += DEFENSE_TRADE_LOG_ODDS;
+    logOdds += DEFENSE_FORGIVE_TRADE;
   }
-  return DEFENSE_FORGIVE_FLOOR
-    + DEFENSE_FORGIVE_RANGE / (1 + Math.exp(-logOdds));
+  return 100 / (1 + Math.exp(-logOdds));
 }
 
 /** Recorded purchase choices follow card roles and price limits, without a roll. */

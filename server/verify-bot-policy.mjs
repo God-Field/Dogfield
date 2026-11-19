@@ -1082,6 +1082,7 @@ for await (const episode of readGzipLines(episodePath)) {
         best: bestDefense, lethal, category: context.category,
         element: context.element,
         attackModelIds: episode.attack.itemModelIds,
+        predictedForgivePercent: chance,
         chosenDefense: episode.chosen?.totalDefense ?? 0,
         chosenItemIds: episode.chosen?.items?.map((item) => item.modelId) ?? [],
         fullyCovered: bestDefense >= context.damage,
