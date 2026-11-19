@@ -480,76 +480,87 @@ export class Battle {
     }
   }
 
-  resolveDeaths(allowGameEnd = true) {
+  private resolvePlayerDeath(player: Player): void {
+    const amulets = getOccupiedItemSlots(player).filter(
+      (itemSlot) => this.getItemDefinition(itemSlot.modelId).ability === 'revive',
+    );
+    if (amulets.length > 0) {
+      const amulet = amulets.length === 1
+        ? amulets[0]
+        : this.random.pick('reviveItem', amulets);
+      this.emit('revive', {
+        playerId: player.id,
+        item: amulet,
+      });
+      this.takeSlots(player, [amulet]);
+      this.applyStatBoost(
+        player,
+        'hp',
+        this.getItemDefinition(amulet.modelId).abilityValue,
+        true,
+      );
+      return;
+    }
+
+    player.dead = true;
+    if ((player.confusionCount ?? 0) > 0) {
+      const pendingAttack = this.game.attacks?.[0];
+      const diedOutsideAttack = pendingAttack === undefined
+        || pendingAttack.targetPlayerId === undefined;
+      player.confusionCount = this.playedThisSubmit.has(player.id)
+        && diedOutsideAttack
+        ? -1
+        : 0;
+    }
+    this.emit('die', {
+      playerId: player.id,
+    });
+    this.enqueueDyingAttack(player);
+    const turnProgress = (this.game.serverTurn ??= {});
+    turnProgress.turnDeaths ??= [];
+    turnProgress.turnDeaths.push(player.id);
+    if ((this.game.attacks?.length ?? 0) >= 1) {
+      this.game.dyingPlayerIds ??= [];
+      if (!this.game.dyingPlayerIds.includes(player.id)) {
+        this.game.dyingPlayerIds.push(player.id);
+      }
+    }
+  }
+
+  private endGameIfWon(): boolean {
+    if (
+      this.game.dyingPlayerIds?.length ||
+      this.game.serverTurn?.dyingAttacks?.length ||
+      !this.hasWinningSide()
+    ) {
+      return false;
+    }
+    delete this.game.attacks;
+    this.game.isOver = true;
+    delete this.game.guardianPlayerIds;
+    delete this.game.diseasePlayerId;
+    delete this.game.dyingPlayerIds;
+    for (const player of this.game.players) {
+      const diedThisSubmit = this.game.serverTurn?.turnDeaths?.includes(player.id);
+      if ((player.confusionCount ?? 0) < 0 && !diedThisSubmit) {
+        delete player.confusionCount;
+      }
+    }
+    this.emit('endGame');
+    return true;
+  }
+
+  resolveDeaths(allowGameEnd = true): boolean {
     const target = this.findPlayer(this.attack?.targetPlayerId);
     const deathOrder = target && !target.dead
       ? [target, ...this.alive.filter((player) => player !== target)]
       : this.alive;
     for (const player of deathOrder) {
       if (player.hp <= 0) {
-        const amulets = getOccupiedItemSlots(player).filter(
-          (itemSlot) =>
-            this.getItemDefinition(itemSlot.modelId).ability === 'revive',
-        );
-        if (amulets.length > 0) {
-          const amulet = amulets.length === 1
-            ? amulets[0]
-            : this.random.pick('reviveItem', amulets);
-          this.emit('revive', {
-            playerId: player.id,
-            item: amulet,
-          });
-          this.takeSlots(player, [amulet]);
-          this.applyStatBoost(player, 'hp', this.getItemDefinition(amulet.modelId).abilityValue, true);
-        } else {
-          player.dead = true;
-          if ((player.confusionCount ?? 0) > 0) {
-            const pendingAttack = this.game.attacks?.[0];
-            const diedOutsideAttack = pendingAttack === undefined
-              || pendingAttack.targetPlayerId === undefined;
-            player.confusionCount = this.playedThisSubmit.has(player.id)
-              && diedOutsideAttack
-              ? -1
-              : 0;
-          }
-          this.emit('die', {
-            playerId: player.id,
-          });
-          this.enqueueDyingAttack(player);
-          const turnProgress = (this.game.serverTurn ??= {});
-          turnProgress.turnDeaths ??= [];
-          turnProgress.turnDeaths.push(player.id);
-          if ((this.game.attacks?.length ?? 0) >= 1) {
-            this.game.dyingPlayerIds ??= [];
-            if (!this.game.dyingPlayerIds.includes(player.id)) {
-              this.game.dyingPlayerIds.push(player.id);
-            }
-          }
-        }
+        this.resolvePlayerDeath(player);
       }
     }
-    if (
-      allowGameEnd &&
-      !this.game.dyingPlayerIds?.length &&
-      !this.game.serverTurn?.dyingAttacks?.length &&
-      this.hasWinningSide()
-    ) {
-      delete this.game.attacks;
-      this.game.isOver = true;
-      delete this.game.guardianPlayerIds;
-      delete this.game.diseasePlayerId;
-      delete this.game.dyingPlayerIds;
-      for (const player of this.game.players) {
-
-        const diedThisSubmit = this.game.serverTurn?.turnDeaths?.includes(player.id);
-        if ((player.confusionCount ?? 0) < 0 && !diedThisSubmit) {
-          delete player.confusionCount;
-        }
-      }
-      this.emit('endGame');
-      return true;
-    }
-    return false;
+    return allowGameEnd && this.endGameIfWon();
   }
 
   hasWinningSide(): boolean {
