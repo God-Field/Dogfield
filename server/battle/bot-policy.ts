@@ -437,6 +437,7 @@ const DEFENSE_EFFECT_LOG_ODDS = 3.37;
 const DEFENSE_MIRACLE_LOG_ODDS = -0.64;
 const DEFENSE_GUARDIAN_LOG_ODDS = -0.75;
 const DEFENSE_TRADE_LOG_ODDS = 1.37;
+const DARKNESS_FULL_COVERAGE_FORGIVE_PERCENT = 1.5;
 const DEFENSE_FOLLOW_UP_PERCENT = 50;
 
 /** Prefer useful prevention without spending cards on unnecessary defense. */
@@ -468,9 +469,13 @@ export function botDefenseForgivePercent(
   lethal: boolean,
   bestDefense: number,
   attackCategory = 'weapons',
+  attackElement = 'none',
 ): number {
   if (legalCount === 0) {
     return 100;
+  }
+  if (damage > 0 && bestDefense >= damage && attackElement === 'darkness') {
+    return DARKNESS_FULL_COVERAGE_FORGIVE_PERCENT;
   }
   let logOdds = DEFENSE_BASE_LOG_ODDS
     - Math.min(damage, 15) * DEFENSE_DAMAGE_LOG_ODDS

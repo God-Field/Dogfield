@@ -127,7 +127,10 @@ function projectDefenseEpisode(episode) {
   if (JSON.stringify(observedIds) !== JSON.stringify(localIds)) {
     return { reason: 'inconsistent-legal-options' };
   }
-  return { candidates, damage, category: definitions[0].category.key };
+  return {
+    candidates, damage, category: definitions[0].category.key,
+    element: engine.getAttackElement(definitions)?.key ?? 'none',
+  };
 }
 
 function addCount(map, key, amount = 1) {
@@ -1068,7 +1071,8 @@ for await (const episode of readGzipLines(episodePath)) {
     const hasSpecialDefense = candidates.some((candidate) => candidate.definition.ability !== '');
     const lethal = context.damage > 0 && context.damage >= episode.hp;
     const chance = botDefenseForgivePercent(
-      context.damage, candidates.length, hasSpecialDefense, lethal, bestDefense, context.category,
+      context.damage, candidates.length, hasSpecialDefense, lethal, bestDefense,
+      context.category, context.element,
     );
     if (defenseDataPath) {
       const hash = createHash('sha256').update(episode.gameId ?? episode.file).digest().readUInt32BE(0);
@@ -1076,6 +1080,11 @@ for await (const episode of readGzipLines(episodePath)) {
         gameId: episode.gameId, file: episode.file, split: hash % 5,
         damage: context.damage, legal: candidates.length, response: hasSpecialDefense,
         best: bestDefense, lethal, category: context.category,
+        element: context.element,
+        attackModelIds: episode.attack.itemModelIds,
+        chosenDefense: episode.chosen?.totalDefense ?? 0,
+        chosenItemIds: episode.chosen?.items?.map((item) => item.modelId) ?? [],
+        fullyCovered: bestDefense >= context.damage,
         forgive: episode.chosen?.forgive === true,
       });
     }

@@ -186,9 +186,10 @@ export function chooseBotDefense(
   const bestDefense = Math.max(...candidates.map((candidate) => candidate.defense));
   const hasSpecialDefense = candidates.some((candidate) => candidate.definition.ability !== '');
   const lethal = damage > 0 && damage >= player.hp;
+  const attackElement = engine.getAttackElement(attackDefinitions)?.key ?? 'none';
   const forgivePercent = botDefenseForgivePercent(
     damage, candidates.length, hasSpecialDefense, lethal, bestDefense,
-    initialDefinition.category.key,
+    initialDefinition.category.key, attackElement,
   );
   if (battle.random.chance('botDefenseForgive', forgivePercent)) {
     return {};

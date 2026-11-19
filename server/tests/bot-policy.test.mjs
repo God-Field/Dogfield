@@ -5,6 +5,7 @@ import { getItemDefinition } from '../engine.ts';
 import { Random } from '../random.ts';
 import {
   botShouldAcceptBuy,
+  botDefenseForgivePercent,
   botTargetProbabilities,
 } from '../battle/bot-policy.ts';
 
@@ -43,6 +44,15 @@ test('bots forgive when no legal defense item exists', () => {
   defender.isBot = true;
   defender.mp = 0;
   assert.deepEqual(battle.botCommand().command, {});
+});
+
+test('darkness attacks with full defense coverage are almost always blocked', () => {
+  assert.equal(botDefenseForgivePercent(8, 2, false, false, 8, 'weapons', 'darkness'), 1.5);
+  assert.equal(botDefenseForgivePercent(8, 2, false, false, 7, 'weapons', 'darkness'),
+    botDefenseForgivePercent(8, 2, false, false, 7, 'weapons', 'weapons'));
+  assert.equal(botDefenseForgivePercent(8, 2, false, false, 8, 'weapons', 'weapons'),
+    botDefenseForgivePercent(8, 2, false, false, 8, 'weapons', 'none'));
+  assert.equal(botDefenseForgivePercent(8, 0, false, false, 0, 'weapons', 'darkness'), 100);
 });
 
 test('bots leave trade attacks unanswered', () => {
