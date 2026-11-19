@@ -56,8 +56,6 @@ export function applyItemEffect(
       battle.applyStatBoost(target, 'mp', amount);
       break;
     case 'boostCP':
-      battle.applyStatBoost(target, 'cp', amount);
-      break;
     case 'boostCPToEnemy':
       battle.applyStatBoost(target, 'cp', amount);
       break;
