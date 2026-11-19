@@ -18,6 +18,16 @@ function restoreOfferedItem(seller: Player, item: Slot): void {
   insertItemSlot(seller, item);
 }
 
+function transferPrice(
+  battle: Battle,
+  buyer: Player,
+  seller: Player,
+  price: number,
+): void {
+  battle.applyStatChange(buyer, 'cp', -price);
+  battle.applyStatChange(seller, 'cp', price);
+}
+
 export function offerPurchase(battle: Battle, buyer: Player, seller: Player): void {
   const available = getOccupiedItemSlots(seller).filter(
     (itemSlot) => !itemSlot.used,
@@ -60,8 +70,7 @@ export function confirmPurchase(battle: Battle, buyer: Player, command: Command)
   const offeredItemId = turnProgress?.buyingItemId;
   let slot;
   if (bought) {
-    battle.applyStatChange(buyer, 'cp', -definition.price);
-    battle.applyStatChange(seller, 'cp', definition.price);
+    transferPrice(battle, buyer, seller, definition.price);
     slot = battle.addSlot(buyer, definition.id, false);
   } else {
     requireValue(offeredItemId !== undefined);
@@ -89,8 +98,7 @@ export function resolveSale(
   definition: ItemDefinition,
   restoredItemId?: number,
 ): void {
-  battle.applyStatChange(buyer, 'cp', -definition.price);
-  battle.applyStatChange(seller, 'cp', definition.price);
+  transferPrice(battle, buyer, seller, definition.price);
   let slot;
   const hasRestoredId = restoredItemId !== undefined
     && !buyer.items.some((itemSlot) => itemSlot.id === restoredItemId);
