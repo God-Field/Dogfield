@@ -46,6 +46,11 @@ function touchMember(
   }
 }
 
+function isRoomActive(room: Room, now: number, windowMs: number): boolean {
+  const updatedAt = Date.parse(room.updatedAt ?? '');
+  return Number.isFinite(updatedAt) && updatedAt > now - windowMs;
+}
+
 function sameUserCounts(
   previous: Record<string, number> | null,
   next: Record<string, number>,
@@ -131,26 +136,20 @@ export class RoomService {
       if (roomPathMatch) {
         const mode = roomPathMatch[1];
         if (mode === 'training') {
-          const updatedAt = Date.parse(storedRoom.updatedAt ?? '');
-          const activityCutoff = now - TRAINING_COUNT_ACTIVITY_WINDOW_MS;
-          if (!Number.isFinite(updatedAt) || updatedAt <= activityCutoff) {
+          if (!isRoomActive(storedRoom, now, TRAINING_COUNT_ACTIVITY_WINDOW_MS)) {
             continue;
           }
           trainingCount += storedRoom.users.length;
           continue;
         }
         if (mode === 'private') {
-          const updatedAt = Date.parse(storedRoom.updatedAt ?? '');
-          const activityCutoff = now - PRIVATE_COUNT_ACTIVITY_WINDOW_MS;
-          if (!Number.isFinite(updatedAt) || updatedAt <= activityCutoff) {
+          if (!isRoomActive(storedRoom, now, PRIVATE_COUNT_ACTIVITY_WINDOW_MS)) {
             continue;
           }
           privateCount += storedRoom.users.length;
           continue;
         }
-        const updatedAt = Date.parse(storedRoom.updatedAt ?? '');
-        const activityCutoff = now - DUEL_COUNT_ACTIVITY_WINDOW_MS;
-        if (!Number.isFinite(updatedAt) || updatedAt <= activityCutoff) {
+        if (!isRoomActive(storedRoom, now, DUEL_COUNT_ACTIVITY_WINDOW_MS)) {
           continue;
         }
         for (const user of storedRoom.users) {
