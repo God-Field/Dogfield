@@ -22,13 +22,14 @@ export interface BotItem {
   };
 }
 
-type BotTargetPlayer = Pick<Player, 'id' | 'hp' | 'mp' | 'cp' | 'dead' | 'guardian'>;
+type BotTargetPlayer = Pick<Player, 'id' | 'hp' | 'mp' | 'cp' | 'dead' | 'guardian' | 'curses'>;
 
 export interface BotTargetContext {
   actor: BotTargetPlayer;
   players: readonly BotTargetPlayer[];
   targets: readonly BotTargetPlayer[];
   drawExactTieBoundary?: () => boolean;
+  attackMpCost?: number;
 }
 
 // The best held-out hard-boundary fit is close to this simple integer ratio.
@@ -37,6 +38,8 @@ const TARGET_HP_STRENGTH_WEIGHT = 3;
 const TARGET_MP_STRENGTH_WEIGHT = 2;
 const TARGET_CP_STRENGTH_WEIGHT = 1;
 const TARGET_GUARDIAN_STRENGTH = 90;
+const TARGET_DISEASE_CURSE_PENALTY = 20;
+const TARGET_HEAVEN_CURSE_PENALTY = 60;
 // Estimated from recorded attacks that had both tied and strictly eligible enemies.
 export const BOT_TARGET_EXACT_TIE_PERCENT = 40;
 
@@ -46,16 +49,22 @@ export function sameTargetStats(first: BotTargetPlayer, second: BotTargetPlayer)
 }
 
 export function botPlayerStrength(player: BotTargetPlayer): number {
+  const diseaseCurseCount = (player.curses ?? []).filter((curse) =>
+    ['cold', 'fever', 'hell', 'heaven'].includes(curse),
+  ).length;
   return (
     player.hp * TARGET_HP_STRENGTH_WEIGHT +
     player.mp * TARGET_MP_STRENGTH_WEIGHT +
     player.cp * TARGET_CP_STRENGTH_WEIGHT +
-    (player.guardian ? TARGET_GUARDIAN_STRENGTH : 0)
+    (player.guardian ? TARGET_GUARDIAN_STRENGTH : 0) -
+    diseaseCurseCount * TARGET_DISEASE_CURSE_PENALTY -
+    ((player.curses ?? []).includes('heaven') ? TARGET_HEAVEN_CURSE_PENALTY : 0)
   );
 }
 
 function applyTargetGroupBoundary(
   probabilities: number[],
+  ability: string,
   context?: BotTargetContext,
 ): number[] {
   if (!context || context.targets.length !== probabilities.length) {
@@ -65,9 +74,12 @@ function applyTargetGroupBoundary(
   if (livingPlayers.length < 2) {
     return probabilities;
   }
-  const scores = livingPlayers.map(botPlayerStrength);
+  const attackMp = ability === 'atkBy2xMP' ? 0
+    : Math.max(0, context.actor.mp - (context.attackMpCost ?? 0));
+  const actor = { ...context.actor, mp: attackMp };
+  const scores = livingPlayers.map((player) => botPlayerStrength(player.id === actor.id ? actor : player));
   const scoreSum = scores.reduce((sum, score) => sum + score, 0);
-  const actorScore = botPlayerStrength(context.actor);
+  const actorScore = botPlayerStrength(actor);
   // The lobby mean determines the direction. The acting player's score
   // determines where to divide the eligible targets in that direction.
   const meanDirection = Math.sign(actorScore * livingPlayers.length - scoreSum);
@@ -84,7 +96,7 @@ function applyTargetGroupBoundary(
     const difference = actorScore - botPlayerStrength(target);
     // At the mean, recorded choices mainly aim upward and can include tied targets.
     if (direction === 0) return difference <= 0 ? probability : 0;
-    if (difference === 0 && sameTargetStats(context.actor, target)) {
+    if (difference === 0 && sameTargetStats(actor, target)) {
       tiesAreEligible ??= context.drawExactTieBoundary?.() ?? false;
       return tiesAreEligible ? probability : 0;
     }
@@ -195,7 +207,7 @@ export function botTargetProbabilities(
     }
     return probability;
   });
-  return applyTargetGroupBoundary(probabilities, context);
+  return applyTargetGroupBoundary(probabilities, ability, context);
 }
 
 const TEAR_SELF_PERCENT_WITH_FEW_PLAYERS = 7;

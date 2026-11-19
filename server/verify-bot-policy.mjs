@@ -309,9 +309,11 @@ function auditRuntimeTargetSupport({ decision, ability, living, actor, target })
   if (targetIndex < 0) return;
   const counts = actor.team ? runtimeTargetSupport.teams : runtimeTargetSupport.freeForAll;
   const hps = candidates.map(({ hp }) => hp);
+  const attackMpCost = engine.calculateMpCost((decision.items ?? []).map(getItemDefinition));
   const branches = [false, true].map((allowTies) => {
     const probabilities = botTargetProbabilities(hps, ability, {
-      actor, players: living, targets: candidates, drawExactTieBoundary: () => allowTies,
+      actor, players: living, targets: candidates, attackMpCost,
+      drawExactTieBoundary: () => allowTies,
     });
     return { target: probabilities[targetIndex], fallback: probabilities.every((probability) => probability === 0) };
   });
@@ -401,6 +403,7 @@ for await (const decision of readGzipLines(targetPath)) {
       const roster = living.map((player) => ({
         ...player, team: decision.team_fwd?.[player.id],
         guardian: decision.replayed_status.guardian[player.id],
+        curses: decision.replayed_status.curses[player.id] ?? [],
       }));
       auditRuntimeTargetSupport({
         decision, ability, living: roster,
@@ -410,9 +413,14 @@ for await (const decision of readGzipLines(targetPath)) {
     }
     if (replayActor && replayTarget && replayActor !== replayTarget &&
         living.every(({ id, mp }) => !decision.team_fwd?.[id] && Number.isFinite(mp))) {
-      const sum = living.reduce((total, player) => total + botPlayerStrength(player), 0);
-      const score = botPlayerStrength(replayActor);
-      const gap = score - botPlayerStrength(replayTarget);
+      const withStatus = (player) => ({
+        ...player,
+        guardian: decision.replayed_status?.guardian[player.id],
+        curses: decision.replayed_status?.curses[player.id] ?? [],
+      });
+      const sum = living.reduce((total, player) => total + botPlayerStrength(withStatus(player)), 0);
+      const score = botPlayerStrength(withStatus(replayActor));
+      const gap = score - botPlayerStrength(withStatus(replayTarget));
       const side = score * living.length - sum;
       const outcome = living.length === 2 ? 'forced' : gap === 0 || side === 0
         ? 'ties' : gap * side > 0 ? 'matched' : 'mismatched';
@@ -440,6 +448,7 @@ for await (const decision of readGzipLines(targetPath)) {
         const { guardian } = decision.replayed_status;
         const guardianScore = (player) => botPlayerStrength({
           ...player, guardian: guardian[player.id],
+          curses: decision.replayed_status.curses[player.id] ?? [],
         });
         const actorWithGuardian = guardianScore(replayActor);
         const guardianGap = actorWithGuardian - guardianScore(replayTarget);

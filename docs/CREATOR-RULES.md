@@ -217,12 +217,11 @@ Decision-time curse and guardian replay passed the end-of-update check
 for 33,457 Dogfield and 15,347 Godfield Refactor updates. On the held-out
 plain weapon rows with confirmed status, adding 90 strength points
 for a guardian raised agreement from 88.24% to 91.37% in Dogfield and
-from 88.32% to 92.46% in Godfield Refactor. The coefficient came from a
-Dogfield training sweep. Adding separate curse weights to the same
-score did not improve both held-out sets. The live bot now includes
-the guardian bonus. The verifier's `guardianBoundary` compares the
-two rules on the same status-confirmed direct choices. Earlier rows
-in this document describe the score before this bonus was added.
+from 88.32% to 92.46% in Godfield Refactor. A later curse-weight sweep
+found a repeatable held-out gain in both corpora: subtract 20 points
+for each disease curse (cold, fever, hell, Heaven), and an additional
+60 for Heaven. The verifier's `guardianBoundary` remains a guardian-only
+comparison; the runtime replay includes both guardian and curse scores.
 
 Separate guardian values, separate scores for direction and eligibility,
 and interactions between guardians and combat stats did not improve
@@ -350,6 +349,29 @@ prevented a weakest attacker from choosing the middle player.
 The older mean-only direction counts remain in the report as a
 baseline. The runtime counts include forced choices and ties, and
 measure eligibility rather than the chance of drawing a given target.
+
+The bot now chooses a direct target after finalizing the attack cards.
+It scores the attacker with the MP remaining after the full attack
+cost, or zero MP for `atkBy2xMP`. The projection does not change live
+MP before submission. On the same held-out games, runtime eligibility
+rose to 6,280 of 6,718 in Dogfield and 3,866 of 4,123 in Godfield
+Refactor after adding the disease-curse penalties. That is a net gain
+of 119 choices over the prior runtime rule: 10,146 of 10,841 choices
+(93.59%) are supported. The remaining 695 choices are unsupported by
+the current group rule. The runtime report also breaks down eligibility
+by attack ability.
+Re-fitting the cutoff on the larger lobbies with median, spread, and
+trimmed mean terms had no held-out gain across both corpora.
+
+Refitting HP, MP, currency, and guardian weights on the post-cost
+snapshots selected the existing `3:2:1` weights and 90-point guardian
+bonus on Dogfield training games. The three-player direction rule also
+improved agreement in games that started with more than three players.
+On held-out three-player choices with unequal attacker and target
+scores, the remaining 13 direction misses all involved the middle
+player attacking the weakest. Three came from consecutive turns in
+one Godfield Refactor game. Rules based on the gaps to the other two
+players and the weakest player's HP did not improve the training fit.
 
 The scoring candidates were explored on training games. Validation games are
 held out by SHA-256 game ID, using the bot verifier's existing 20% split.

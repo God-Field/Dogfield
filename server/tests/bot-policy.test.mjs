@@ -443,6 +443,28 @@ test('bot Sell weights the target by HP rank and never itself', () => {
   }
 });
 
+test('bot chooses its target after accounting for a follow-up miracle MP cost', () => {
+  class FollowUpRandom extends Random {
+    chance(label, percent) {
+      if (label === 'botAttackExtraItem') return percent === 12;
+      return super.chance(label, percent);
+    }
+    pick(label, values, weight) {
+      if (label === 'botAttackItem') return values.find(({ modelId }) => modelId === 16);
+      return super.pick(label, values, weight);
+    }
+  }
+  const actor = createPlayer(1, [16, 217]);
+  Object.assign(actor, { isBot: true, mp: 16 });
+  const enemies = [2, 3, 4].map((id) => createPlayer(id));
+  for (const enemy of enemies) Object.assign(enemy, { hp: 37, mp: 10 });
+  enemies[2].hp = 44;
+  const choice = new Battle(createGame([actor, ...enemies]), new FollowUpRandom(1)).botCommand();
+  assert.deepEqual(choice.command.itemIds, [1, 2]);
+  assert.equal(choice.command.targetPlayerId, enemies[2].id);
+  assert.equal(actor.mp, 16);
+});
+
 test('bot Tear self-targets more often when few players are alive', () => {
   class NoPrayerRandom extends Random {
     chance(label, percent) {

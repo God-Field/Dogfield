@@ -226,6 +226,7 @@ export function chooseBotTarget(
   battle: Battle,
   enemies: Player[],
   definition?: ItemDefinition,
+  attackMpCost = definition ? engine.calculateMpCost([definition]) : 0,
 ): number | undefined {
   const rankedEnemies = [...enemies].sort(
     (firstEnemy, secondEnemy) =>
@@ -242,6 +243,7 @@ export function chooseBotTarget(
     actor,
     players: battle.alive,
     targets: rankedEnemies,
+    attackMpCost,
     drawExactTieBoundary: () => battle.random.chance('botTargetTie', BOT_TARGET_EXACT_TIE_PERCENT),
   };
   const probabilities = botTargetProbabilities(
@@ -487,6 +489,7 @@ export function buildBotAttackCommand(
   itemSlot: Slot,
   definition: ItemDefinition,
   enemies: Player[],
+  deferDirectTarget = false,
 ): Command | null {
   const command: Command = {
     itemIds: [itemSlot.id],
@@ -594,15 +597,13 @@ export function buildBotAttackCommand(
       if (enemies.length === 0) {
         return null;
       }
-      const targetPlayerId = chooseBotTarget(
-        battle,
-        enemies,
-        definition,
-      );
-      if (targetPlayerId === undefined) {
-        return null;
+      if (!deferDirectTarget) {
+        const targetPlayerId = chooseBotTarget(battle, enemies, definition);
+        if (targetPlayerId === undefined) {
+          return null;
+        }
+        command.targetPlayerId = targetPlayerId;
       }
-      command.targetPlayerId = targetPlayerId;
     }
   }
   if (definition.ability === 'exchange') {
@@ -671,6 +672,7 @@ export function botCommand(battle: Battle) {
       itemSlot,
       definition,
       enemies,
+      true,
     );
     if (
       command === null ||
@@ -721,6 +723,13 @@ export function botCommand(battle: Battle) {
   );
   if (!isValidBotCommand(battle, player, chosenCandidate.command)) {
     throw new Error('Bot attack follow-up produced an invalid command');
+  }
+  const { definition, command } = chosenCandidate;
+  if (definition.isDirectTargetCommand() && command.targetPlayerId === undefined) {
+    const { mpCost, definitions } = battle.selectCommandItems(player, command, false);
+    if (!definitions.some(({ ability }) => ability === 'attackEveryEnemy')) {
+      command.targetPlayerId = chooseBotTarget(battle, enemies, definition, mpCost);
+    }
   }
   return {
     player: player,
