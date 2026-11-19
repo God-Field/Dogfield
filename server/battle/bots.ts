@@ -15,7 +15,7 @@ import {
   botTargetProbabilities,
   botTearSelfPercent,
 } from './bot-policy.ts';
-import { areEnemies } from './targets.ts';
+import { areEnemies, areTeammates } from './targets.ts';
 import { getOccupiedItemSlots } from './inventory.ts';
 
 /**
@@ -461,14 +461,8 @@ export function isValidBotCommand(
 }
 
 function getBotTeammates(battle: Battle, player: Player): Player[] {
-  if (!player.team) {
-    return [];
-  }
-
-  return battle.alive.filter(
-    (candidatePlayer) =>
-      candidatePlayer.id !== player.id &&
-      candidatePlayer.team === player.team,
+  return battle.alive.filter((candidatePlayer) =>
+    areTeammates(player, candidatePlayer),
   );
 }
 

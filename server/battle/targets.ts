@@ -64,7 +64,11 @@ export function selectDirectAttackTarget(
   return target;
 }
 
-export const areEnemies = (firstPlayer: Player, secondPlayer: Player) =>
+export const areTeammates = (firstPlayer: Player, secondPlayer: Player) =>
   firstPlayer.id !== secondPlayer.id &&
-  (!firstPlayer.team || firstPlayer.team !== secondPlayer.team);
+  Boolean(firstPlayer.team) &&
+  firstPlayer.team === secondPlayer.team;
+
+export const areEnemies = (firstPlayer: Player, secondPlayer: Player) =>
+  firstPlayer.id !== secondPlayer.id && !areTeammates(firstPlayer, secondPlayer);
 
