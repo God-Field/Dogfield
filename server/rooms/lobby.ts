@@ -101,15 +101,12 @@ export function selectGameUsers(
     return null;
   }
   const teams = new Set(entries.map((entry) => entry.team));
-  const hasSoloEntry = teams.has(0);
-  const hasValidSoloEntries = teams.size === 1;
-  const hasValidTeamEntries =
+  const isAllSolo = teams.size === 1 && teams.has(0);
+  const isValidTeamMatch =
+    !teams.has(0) &&
     teams.size >= engine.MIN_TEAMS &&
-    teams.size !== entries.length;
-  const canStart = hasSoloEntry
-    ? hasValidSoloEntries
-    : hasValidTeamEntries;
-  if (!canStart) {
+    teams.size < entries.length;
+  if (!isAllSolo && !isValidTeamMatch) {
     return null;
   }
   return entries.map((entry) => ({
