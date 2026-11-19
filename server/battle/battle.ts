@@ -1388,6 +1388,24 @@ export class Battle {
     return false;
   }
 
+  private resolvePendingDeaths(allowGameEnd = false): boolean {
+    this.resolveDeaths(false);
+    if (this.resolveDying()) {
+      return true;
+    }
+    return allowGameEnd && this.resolveDeaths();
+  }
+
+  private finishWinningTurn(actingPlayer: Player, gift: boolean): void {
+    if (gift && this.apocalypse) {
+      this.refillConsumedSlots(actingPlayer);
+    }
+    if (this.resolveDying()) {
+      return;
+    }
+    this.resolveDeaths();
+  }
+
   finishTurn({ gift = true } = {}): void {
     this.resolveDeaths(false);
     const turnProgress = (this.game.serverTurn ??= {});
@@ -1397,18 +1415,11 @@ export class Battle {
     }
     const actingPlayer = this.requirePlayer(this.game.attackTurnPlayerId);
     this.resolveTurnDisease(actingPlayer, turnProgress);
-    this.resolveDeaths(false);
-    if (this.resolveDying()) {
+    if (this.resolvePendingDeaths()) {
       return;
     }
     if (this.hasWinningSide()) {
-      if (gift && this.apocalypse) {
-        this.refillConsumedSlots(actingPlayer);
-      }
-      if (this.resolveDying()) {
-        return;
-      }
-      this.resolveDeaths();
+      this.finishWinningTurn(actingPlayer, gift);
       return;
     }
     if (this.resolveTurnGuardians(actingPlayer, turnProgress)) {
@@ -1418,11 +1429,7 @@ export class Battle {
     if (gift) {
       this.refillConsumedSlots(actingPlayer);
     }
-    this.resolveDeaths(false);
-    if (this.resolveDying()) {
-      return;
-    }
-    if (this.resolveDeaths()) {
+    if (this.resolvePendingDeaths(true)) {
       return;
     }
     this.advanceTurn();
