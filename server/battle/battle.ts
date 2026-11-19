@@ -39,7 +39,9 @@ const diseaseCurses = ['cold', 'fever', 'hell', 'heaven'];
 const GUARDIAN_LEAVE_PERCENT = 10;
 const GUARDIAN_ACTION_PERCENT = 25;
 const DISEASE_WORSEN_PERCENT = 5;
-const DOUBLE_ATTACK_FACTOR = 2;
+const MP_TO_ATTACK_MULTIPLIER = 2;
+const ATTACK_TWICE_STRIKE_COUNT = 2;
+const COUNTERATTACK_MULTIPLIER = 2;
 const HEAVEN_HEAL_AMOUNT = 5;
 const DISEASE_DAMAGE: Record<string, number> = {
   cold: 1,
@@ -924,7 +926,7 @@ export class Battle {
     if (definition.ability !== 'atkBy2xMP') {
       return false;
     }
-    const attackValue = DOUBLE_ATTACK_FACTOR * player.mp;
+    const attackValue = MP_TO_ATTACK_MULTIPLIER * player.mp;
     if (attackValue !== 0) {
       attack.atk = attackValue;
     }
@@ -999,7 +1001,7 @@ export class Battle {
     this.game.attacks = createAttackQueue(attack, targets, this.random, {
       cycleCount: targeting.kind === 'enemies' ? targeting.cycles : 1,
       strikesPerTarget: firstDefinition.ability === 'attackTwice'
-        ? DOUBLE_ATTACK_FACTOR
+        ? ATTACK_TWICE_STRIKE_COUNT
         : 1,
     });
     this.resolveAttackTarget();
@@ -1198,10 +1200,10 @@ export class Battle {
       attack.atk = Math.max(0, damage);
     }
     if (definition.ability === 'counter2xAtk') {
-      attack.atk = damage * DOUBLE_ATTACK_FACTOR;
+      attack.atk = damage * COUNTERATTACK_MULTIPLIER;
     }
     if (definition.ability === 'counterBoost2xMP') {
-      attack.mp = damage * DOUBLE_ATTACK_FACTOR;
+      attack.mp = damage * COUNTERATTACK_MULTIPLIER;
       attack.targetPlayerId = player.id;
     }
     if (definition.ability === 'counterTakeCP') {
