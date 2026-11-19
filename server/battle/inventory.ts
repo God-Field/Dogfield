@@ -101,7 +101,7 @@ export function addSlot(
 ): ItemAcquisition {
   const items = getOccupiedItemSlots(player);
   const placeholderIndex = findPlaceholderIndex(player);
-  const replacesFullHandPlaceholder =
+  const hasFullHandPlaceholder =
     player.items.length >= engine.MAX_ITEM_SLOTS && placeholderIndex >= 0;
   let itemId = 1;
   while (items.some((item) => item.id === itemId)) {
@@ -109,10 +109,10 @@ export function addSlot(
   }
   let overflowItem;
   const hasFullOccupiedHand = items.length >= engine.MAX_ITEM_SLOTS;
-  const hasNoSpaceForExtraSlot = !fillPlaceholder &&
+  const hasNoSpaceWithoutPlaceholder = !fillPlaceholder &&
     player.items.length >= engine.MAX_ITEM_SLOTS &&
-    !replacesFullHandPlaceholder;
-  if (hasFullOccupiedHand || hasNoSpaceForExtraSlot) {
+    !hasFullHandPlaceholder;
+  if (hasFullOccupiedHand || hasNoSpaceWithoutPlaceholder) {
     // Performed miracles have the same overflow probability as every other card.
     const overflowCandidates = items.length !== 0 ? items : player.items;
     overflowItem = battle.random.pick(
@@ -123,7 +123,7 @@ export function addSlot(
     itemId = overflowItem.id;
   }
   const fillsExistingPlaceholder =
-    fillPlaceholder || replacesFullHandPlaceholder;
+    fillPlaceholder || hasFullHandPlaceholder;
   const item: Slot = {
     id: itemId,
     modelId,
