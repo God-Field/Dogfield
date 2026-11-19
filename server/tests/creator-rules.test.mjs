@@ -127,7 +127,7 @@ test('bot targeting uses the lobby mean to decide which direction to aim', () =>
   const lower = botTargetProbabilities(targets.map((target) => target.hp), '', {
     actor, players, targets,
   });
-  assert.ok(lower.every((probability) => probability > 0));
+  assert.deepEqual(lower, [0, 0, 1]);
   const withDeadPlayer = botTargetProbabilities(targets.map((target) => target.hp), '', {
     actor, players: [...players, { id: 5, hp: 99, mp: 99, cp: 99, dead: true }], targets,
   });
@@ -179,33 +179,33 @@ test('a guardian can change the direction of an attack', () => {
   assert.deepEqual(probabilities(), [1, 0]);
 });
 
-test('a bot exactly at the mean can target stronger or tied enemies', () => {
+test('a bot at the shared mean boundary takes the opposite randomized side', () => {
   const actor = { id: 1, hp: 40, mp: 10, cp: 20 };
   const targets = [
     { ...actor, id: 2, hp: 30 },
     { ...actor, id: 3 },
     { ...actor, id: 4, hp: 50 },
   ];
-  const probabilities = botTargetProbabilities(targets.map(({ hp }) => hp), '', {
+  const probabilities = (side) => botTargetProbabilities(targets.map(({ hp }) => hp), '', {
     actor, players: [actor, ...targets], targets,
+    drawExactTieBoundary: () => side,
   });
-  assert.equal(probabilities[0], 0);
-  assert.ok(probabilities[1] > 0);
-  assert.ok(probabilities[2] > 0);
+  assert.deepEqual(probabilities(false), [0, 0, 1]);
+  assert.deepEqual(probabilities(true), [1, 0, 0]);
   const tied = targets.map((target) => ({ ...actor, id: target.id }));
   assert.deepEqual(botTargetProbabilities(tied.map(({ hp }) => hp), '', {
     actor, players: [actor, ...tied], targets: tied,
   }), [1 / 3, 1 / 3, 1 / 3]);
 });
 
-test('one boundary draw can admit identical opponents while aiming down', () => {
+test('players tied at the shared boundary stay on the same randomized side', () => {
   const actor = { id: 1, hp: 40, mp: 10, cp: 20 };
   const targets = [
     { ...actor, id: 2, hp: 10 },
     { ...actor, id: 3 },
     { ...actor, id: 4 },
     { ...actor, id: 5, hp: 38, mp: 13 },
-    { ...actor, id: 6, hp: 50 },
+    { ...actor, id: 6, hp: 70 },
   ];
   let draws = 0;
   const probabilities = (allowTies) => botTargetProbabilities(targets.map(({ hp }) => hp), '', {
@@ -215,11 +215,10 @@ test('one boundary draw can admit identical opponents while aiming down', () => 
       return allowTies;
     },
   });
-  assert.deepEqual(probabilities(false), [1, 0, 0, 0, 0]);
-  const admitted = probabilities(true);
-  assert.ok(admitted.slice(0, 3).every((probability) => probability > 0));
-  assert.deepEqual(admitted.slice(3), [0, 0]);
-  assert.equal(draws, 2);
+  assert.deepEqual(probabilities(false), [0, 0, 0, 0, 1]);
+  assert.equal(draws, 4);
+  assert.deepEqual(probabilities(true), [1, 0, 0, 0, 0]);
+  assert.equal(draws, 8);
 });
 
 test('the running battle passes the acting bot status into target selection', () => {
@@ -237,5 +236,5 @@ test('the running battle passes the acting bot status into target selection', ()
   const weakActorTargets = botTargetProbabilities(enemies.map(({ hp }) => hp), '', {
     actor, players: [actor, ...enemies], targets: enemies,
   });
-  assert.ok(weakActorTargets.every((probability) => probability > 0));
+  assert.deepEqual(weakActorTargets, [0, 1]);
 });

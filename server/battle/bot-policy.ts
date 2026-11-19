@@ -80,27 +80,49 @@ function applyTargetGroupBoundary(
   const scores = livingPlayers.map((player) => botPlayerStrength(player.id === actor.id ? actor : player));
   const scoreSum = scores.reduce((sum, score) => sum + score, 0);
   const actorScore = botPlayerStrength(actor);
-  // The lobby mean determines the direction. The acting player's score
-  // determines where to divide the eligible targets in that direction.
-  const meanDirection = Math.sign(actorScore * livingPlayers.length - scoreSum);
-  if (meanDirection === 0 && scores.every((score) => score === actorScore)) {
+  // With three living players, the highest strength tier forms the singleton
+  // focused group and everyone else forms the opposing group.
+  if (livingPlayers.length === 3) {
+    const highestScore = Math.max(...scores);
+    if (scores.every((score) => score === highestScore)) {
+      return probabilities.map(() => 1 / probabilities.length);
+    }
+    const actorIsInHighestGroup = actorScore === highestScore;
+    let tiesAreEligible: boolean | undefined;
+    const weights = probabilities.map((probability, targetIndex) => {
+      const target = context.targets[targetIndex];
+      const targetScore = botPlayerStrength(target);
+      const isOppositeGroup = actorIsInHighestGroup
+        ? targetScore < highestScore
+        : targetScore === highestScore;
+      if (isOppositeGroup) return probability;
+      if (actorIsInHighestGroup && targetScore === highestScore && sameTargetStats(actor, target)) {
+        tiesAreEligible ??= context.drawExactTieBoundary?.() ?? false;
+        return tiesAreEligible ? probability : 0;
+      }
+      return 0;
+    });
+    const totalWeight = weights.reduce((total, weight) => total + weight, 0);
+    return totalWeight === 0 ? weights : weights.map((weight) => weight / totalWeight);
+  }
+  // For larger lobbies, split the roster at its mean strength. Keep exact
+  // boundary ties on one randomized side for the whole targeting decision.
+  if (scores.every((score) => score === actorScore)) {
     return probabilities.map(() => 1 / probabilities.length);
   }
-  // With three players, only a strongest attacker aims down.
-  const direction = livingPlayers.length === 3
-    ? (actorScore === Math.max(...scores) ? 1 : -1)
-    : meanDirection;
-  let tiesAreEligible: boolean | undefined;
+  const meanScore = scoreSum / livingPlayers.length;
+  const tieSides = new Map<number, number>();
+  const groupSide = (score: number, playerId: number): number => {
+    if (score !== meanScore) return score > meanScore ? 1 : -1;
+    if (!tieSides.has(playerId)) {
+      tieSides.set(playerId, context.drawExactTieBoundary?.() ? 1 : -1);
+    }
+    return tieSides.get(playerId)!;
+  };
+  const actorSide = groupSide(actorScore, actor.id);
   const weights = probabilities.map((probability, targetIndex) => {
     const target = context.targets[targetIndex];
-    const difference = actorScore - botPlayerStrength(target);
-    // At the mean, recorded choices mainly aim upward and can include tied targets.
-    if (direction === 0) return difference <= 0 ? probability : 0;
-    if (difference === 0 && sameTargetStats(actor, target)) {
-      tiesAreEligible ??= context.drawExactTieBoundary?.() ?? false;
-      return tiesAreEligible ? probability : 0;
-    }
-    return direction * difference > 0 ? probability : 0;
+    return groupSide(botPlayerStrength(target), target.id) !== actorSide ? probability : 0;
   });
   const totalWeight = weights.reduce((total, weight) => total + weight, 0);
   if (totalWeight === 0) {

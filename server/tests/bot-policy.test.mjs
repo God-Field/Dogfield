@@ -254,7 +254,7 @@ test('bot targeting prefers healthier targets for drain and status cards', () =>
   );
 });
 
-test('a bot above the lobby mean targets players weaker than itself', () => {
+test('a bot above the lobby mean targets only players below the shared boundary', () => {
   const actor = createPlayer(1);
   Object.assign(actor, { hp: 70, mp: 10, cp: 10 });
   const loneLowerTarget = createPlayer(2);
@@ -275,8 +275,26 @@ test('a bot above the lobby mean targets players weaker than itself', () => {
   );
 
   assert.ok(probabilities[0] > 0);
-  assert.ok(probabilities[1] > 0);
+  assert.equal(probabilities[1], 0);
   assert.equal(probabilities[2], 0);
+});
+
+test('with three living players the top strength group targets the other group', () => {
+  const actor = createPlayer(1);
+  Object.assign(actor, { hp: 30, mp: 10, cp: 10 });
+  const weakest = createPlayer(2);
+  Object.assign(weakest, { hp: 10, mp: 10, cp: 10 });
+  const strongest = createPlayer(3);
+  Object.assign(strongest, { hp: 50, mp: 10, cp: 10 });
+  const targets = [weakest, strongest];
+  const probabilities = botTargetProbabilities(
+    targets.map((target) => target.hp),
+    '',
+    { actor, players: [actor, ...targets], targets },
+  );
+
+  assert.equal(probabilities[0], 0);
+  assert.equal(probabilities[1], 1);
 });
 
 test('bot targeting picks a legal enemy when its estimated opposite group has none', () => {
@@ -461,7 +479,7 @@ test('bot chooses its target after accounting for a follow-up miracle MP cost', 
   enemies[2].hp = 44;
   const choice = new Battle(createGame([actor, ...enemies]), new FollowUpRandom(1)).botCommand();
   assert.deepEqual(choice.command.itemIds, [1, 2]);
-  assert.equal(choice.command.targetPlayerId, enemies[2].id);
+  assert.ok([enemies[0].id, enemies[1].id].includes(choice.command.targetPlayerId));
   assert.equal(actor.mp, 16);
 });
 

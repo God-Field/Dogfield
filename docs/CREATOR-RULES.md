@@ -338,40 +338,42 @@ inputs, the attacker, or a random draw.
 
 The verifier's `runtimeTargetSupport` checks whether the live policy
 assigns any chance to the recorded opponent, including a possible
-exact tie draw or legal fallback. The previous rule supported 6,047
-of 6,718 held-out Dogfield choices and 3,758 of 4,123 Godfield Refactor
-choices. With the three-player direction rule, this rose to 6,165
-and 3,769, respectively. Three-player choices account for 774 of
-791 supported in Dogfield and 89 of 94 in Godfield Refactor. For
-comparison, a shared split with only the strongest in the upper group
-supported 707 and 81 of those choices, respectively. That split
-prevented a weakest attacker from choosing the middle player.
-The older mean-only direction counts remain in the report as a
-baseline. The runtime counts include forced choices and ties, and
-measure eligibility rather than the chance of drawing a given target.
+boundary draw or legal fallback. Earlier actor-relative rules reported
+93.59% support, but that overstated group agreement: a target weaker
+than its attacker could still be on the same side of a shared roster
+boundary. The current rule uses a shared split: with three living
+players, the highest strength tier is one group and the rest are the
+other; with four or more, the roster mean divides the groups. A bot can
+target only an enemy on the opposite side, except when a score lies
+exactly on the randomized boundary or the legal-target fallback is
+needed.
 
-The bot now chooses a direct target after finalizing the attack cards.
-It scores the attacker with the MP remaining after the full attack
-cost, or zero MP for `atkBy2xMP`. The projection does not change live
-MP before submission. On the same held-out games, runtime eligibility
-rose to 6,280 of 6,718 in Dogfield and 3,866 of 4,123 in Godfield
-Refactor after adding the disease-curse penalties. That is a net gain
-of 119 choices over the prior runtime rule: 10,146 of 10,841 choices
-(93.59%) are supported. The remaining 695 choices are unsupported by
-the current group rule. The runtime report also breaks down eligibility
-by attack ability.
-Re-fitting the cutoff on the larger lobbies with median, spread, and
-trimmed mean terms had no held-out gain across both corpora.
+The bot chooses a direct target after finalizing the attack cards. It
+scores the attacker with MP remaining after the full attack cost, or
+zero MP for `atkBy2xMP`. The projection does not change live MP before
+submission. Strength is `3 × HP + 2 × MP + CP + 90` for a guardian,
+minus 20 per disease curse and another 60 for Heaven. With the shared
+group boundary, runtime support is 5,902 of 6,718 held-out Dogfield
+choices and 3,681 of 4,123 Refactor choices (88.40% combined). For
+status-reconstructed decisions with a determinate side, the recorded
+target is across the inferred boundary in 8,347 of 9,848 held-out
+choices (89.05%), after excluding forced two-player attacks and exact
+boundary ties. This breaks down to 705/762 and 87/92 in three-player
+games, plus 4,536/5,181 and 3,500/3,879 in larger lobbies. A training-only
+refit of the additive score did not improve these held-out rates. The
+verifier still breaks runtime support down by attack ability.
 
 Refitting HP, MP, currency, and guardian weights on the post-cost
-snapshots selected the existing `3:2:1` weights and 90-point guardian
-bonus on Dogfield training games. The three-player direction rule also
-improved agreement in games that started with more than three players.
-On held-out three-player choices with unequal attacker and target
-scores, the remaining 13 direction misses all involved the middle
-player attacking the weakest. Three came from consecutive turns in
-one Godfield Refactor game. Rules based on the gaps to the other two
-players and the weakest player's HP did not improve the training fit.
+snapshots retained the simple `3:2:1` weights and 90-point guardian
+bonus. In three-player games, putting the highest strength tier alone
+opposite the other two matches 682/758 held-out Dogfield choices and
+86/91 Refactor choices after excluding exact top-score ties. The older
+actor-relative rule allowed a middle player to attack the weakest;
+that choice is now excluded because both are in the lower group under
+this split. The larger-lobby mean boundary remains less certain, with
+about one in six status-reconstructed choices crossing the same inferred
+group. The score refit and simple threshold variants did not remove that
+residual.
 
 The scoring candidates were explored on training games. Validation games are
 held out by SHA-256 game ID, using the bot verifier's existing 20% split.
