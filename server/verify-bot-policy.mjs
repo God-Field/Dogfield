@@ -16,24 +16,32 @@ import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import {
+  BOT_TARGET_EXACT_TIE_PERCENT,
   botAttackWeight,
+  botPlayerStrength,
   botShouldAcceptBuy,
   botDefenseForgivePercent,
   botDefenseChoiceWeight,
   botPrayerWeight,
   botSellTargetWeight,
   botTargetProbabilities,
+  sameTargetStats,
   botTearSelfPercent,
 } from './battle/bot-policy.ts';
 import { engine, getItemDefinition } from './engine.ts';
 import { Battle } from './battle/battle.ts';
+import { areEnemies } from './battle/targets.ts';
 
 const refactorRoot = process.env.REFACTOR_ROOT ?? '../godfield-refactor';
-const episodePath = resolve(
-  refactorRoot,
-  'logs/live/campaigns/bot-policy/raw/episodes.jsonl.gz',
-);
+const episodeArgument = process.argv.find((argument) => argument.startsWith('--episodes='));
+const episodePath = episodeArgument
+  ? resolve(episodeArgument.slice('--episodes='.length))
+  : resolve(
+      refactorRoot,
+      'logs/live/campaigns/bot-policy/raw/episodes.jsonl.gz',
+    );
 const targetArgument = process.argv.find((argument) => argument.startsWith('--targets='));
+const buyArgument = process.argv.find((argument) => argument.startsWith('--buy-decisions='));
 const targetPath = targetArgument
   ? resolve(targetArgument.slice('--targets='.length))
   : resolve(refactorRoot, 'logs/live/campaigns/bot-targeting-audit/raw/target-decisions.jsonl.gz');
@@ -67,6 +75,19 @@ async function* readGzipLines(path) {
     }
   }
 }
+
+function buyDecisionKey(file, updateCount, eventIndex, buyer, modelId) {
+  return JSON.stringify([file, updateCount, eventIndex, buyer, modelId]);
+}
+
+const buyBalances = new Map();
+if (buyArgument) {
+  for await (const decision of readGzipLines(resolve(buyArgument.slice('--buy-decisions='.length)))) {
+    const { file, updateCount, eventIndex, buyer, modelId, balance } = decision;
+    buyBalances.set(buyDecisionKey(file, updateCount, eventIndex, buyer, modelId), balance);
+  }
+}
+const buyBalanceAudit = { replayed: 0, replayedUnaffordable: 0, inferredFromAcceptance: 0, legacy: 0 };
 
 function projectDefenseEpisode(episode) {
   const recordedAttack = episode.attack;
@@ -165,21 +186,23 @@ function normalizedDistribution(counts, total) {
 
 const targetLookupKeys = new Set();
 for await (const decision of readGzipLines(targetPath)) {
-  if (decision.rank_agree && decision.target != null && decision.enemies_fwd >= 2) {
+  if (decision.target != null && (decision.replayed_stats ||
+      (decision.rank_agree && decision.enemies_fwd >= 2))) {
     targetLookupKeys.add(`${decision.file}|${decision.updateCount}|${decision.event_index}`);
   }
 }
 const episodes = new Map();
 for await (const episode of readGzipLines(episodePath)) {
   const key = `${episode.file}|${episode.updateCount}|${episode.eventIndex}`;
-  if (!belongsToSplit(episode) || !targetLookupKeys.has(key)) {
+  if (episode.kind !== 'attack' || !episode.isBot ||
+      !belongsToSplit(episode) || !targetLookupKeys.has(key)) {
     continue;
   }
   episodes.set(key, {
     handCertain: episode.handCertain,
     confused: episode.confused,
     curses: episode.curses,
-    chosen: { firstAbility: episode.chosen?.firstAbility, items: episode.chosen?.items },
+    chosen: episode.chosen,
   });
 }
 targetLookupKeys.clear();
@@ -189,16 +212,142 @@ targetLookupKeys.clear();
 // ---------------------------------------------------------------------------
 
 const targetLikelihood = { rows: 0, groupContextRows: 0, negativeLogLikelihood: 0, previousNegativeLogLikelihood: 0 };
+const targetBoundary = { eligible: 0, ties: 0, matched: 0, mismatched: 0, examples: [] };
+const targetProvenance = { immediate: 0, indirect: 0, unavailable: 0 };
+const sharedCutoffDisplacement = { zero: 0, upTo10: 0, upTo30: 0, over30: 0 };
+const fullStatReplayBoundary = { forced: 0, ties: 0, matched: 0, mismatched: 0, changedSnapshots: 0 };
+const targetStatusReplay = {
+  confirmed: 0, fogDisagreements: 0, confusionConfirmed: 0, confusionDisagreements: 0,
+};
+const guardianBoundary = {
+  withGuardianScore: { ties: 0, matched: 0, mismatched: 0 },
+  withoutGuardianScore: { ties: 0, matched: 0, mismatched: 0 },
+  byAttackItemCount: {},
+  byDefeatedCount: {},
+  tieReasons: { allScoresEqual: 0, actorAtMean: 0, targetScoreEqual: 0 },
+  actorAtMeanTargets: { weaker: 0, equal: 0, stronger: 0 },
+  exactTieCandidates: { rows: 0, chosen: 0, expected: 0 },
+  byPairStatus: {
+    neither: { ties: 0, matched: 0, mismatched: 0 },
+    elsewhere: { ties: 0, matched: 0, mismatched: 0 },
+    actorOnly: { ties: 0, matched: 0, mismatched: 0 },
+    targetOnly: { ties: 0, matched: 0, mismatched: 0 },
+    both: { ties: 0, matched: 0, mismatched: 0 },
+  },
+};
+const actorRelativeBoundary = {
+  ties: 0, matched: 0, mismatched: 0, byActorMargin: {}, byTargetMargin: {},
+  farthestMismatches: [],
+};
+const directionConflicts = { count: 0, examples: [] };
+const statusPartitionConflicts = { repeatedSnapshots: 0, conflicts: 0, examples: [] };
+const runtimeTargetSupport = {
+  freeForAll: { eligible: 0, supported: 0, unsupported: 0, tieDrawOnly: 0, fallbackOnly: 0 },
+  teams: { eligible: 0, supported: 0, unsupported: 0, tieDrawOnly: 0, fallbackOnly: 0 },
+  freeForAllByLivingCount: {},
+  freeForAllByAbility: {},
+  examples: [],
+};
+const statusSnapshots = new Map();
+let statusSnapshotFile;
+let currentTargetUpdate;
+const directionsBySnapshot = new Map();
+
+function strictlyDominates(first, second) {
+  return first.hp >= second.hp && first.mp >= second.mp && first.cp >= second.cp &&
+    (first.hp > second.hp || first.mp > second.mp || first.cp > second.cp);
+}
+
+function canPartitionAttacks(edges) {
+  const neighbors = new Map();
+  for (const { actor, target } of edges) {
+    if (!neighbors.has(actor)) neighbors.set(actor, []);
+    if (!neighbors.has(target)) neighbors.set(target, []);
+    neighbors.get(actor).push(target);
+    neighbors.get(target).push(actor);
+  }
+  const groups = new Map();
+  for (const start of neighbors.keys()) {
+    if (groups.has(start)) continue;
+    groups.set(start, false);
+    const pending = [start];
+    while (pending.length) {
+      const player = pending.pop();
+      const group = groups.get(player);
+      for (const neighbor of neighbors.get(player)) {
+        if (groups.get(neighbor) === group) return false;
+        if (!groups.has(neighbor)) {
+          groups.set(neighbor, !group);
+          pending.push(neighbor);
+        }
+      }
+    }
+  }
+  return true;
+}
+
+function finishStatusSnapshots() {
+  for (const [snapshot, attacks] of statusSnapshots) {
+    if (attacks.size < 2) continue;
+    statusPartitionConflicts.repeatedSnapshots++;
+    if (canPartitionAttacks(attacks.values())) continue;
+    statusPartitionConflicts.conflicts++;
+    if (statusPartitionConflicts.examples.length < 5) {
+      statusPartitionConflicts.examples.push({
+        file: statusSnapshotFile, living: JSON.parse(snapshot), attacks: [...attacks.values()],
+      });
+    }
+  }
+  statusSnapshots.clear();
+}
+
+function auditRuntimeTargetSupport({ decision, ability, living, actor, target }) {
+  if (!areEnemies(actor, target)) return;
+  const candidates = living.filter((player) => areEnemies(actor, player))
+    .sort((first, second) => first.hp - second.hp || first.id - second.id);
+  const targetIndex = candidates.findIndex(({ id }) => id === target.id);
+  if (targetIndex < 0) return;
+  const counts = actor.team ? runtimeTargetSupport.teams : runtimeTargetSupport.freeForAll;
+  const hps = candidates.map(({ hp }) => hp);
+  const branches = [false, true].map((allowTies) => {
+    const probabilities = botTargetProbabilities(hps, ability, {
+      actor, players: living, targets: candidates, drawExactTieBoundary: () => allowTies,
+    });
+    return { target: probabilities[targetIndex], fallback: probabilities.every((probability) => probability === 0) };
+  });
+  const [closed, open] = branches;
+  const canChoose = ({ target, fallback }) => target > 0 || fallback;
+  const supported = branches.some(canChoose);
+  counts.eligible++;
+  counts[supported ? 'supported' : 'unsupported']++;
+  if (!actor.team) {
+    const bySize = runtimeTargetSupport.freeForAllByLivingCount[living.length] ??=
+      { supported: 0, unsupported: 0 };
+    bySize[supported ? 'supported' : 'unsupported']++;
+    const byAbility = runtimeTargetSupport.freeForAllByAbility[ability || '(plain)'] ??=
+      { supported: 0, unsupported: 0 };
+    byAbility[supported ? 'supported' : 'unsupported']++;
+  }
+  if (supported && !canChoose(closed) && canChoose(open)) counts.tieDrawOnly++;
+  if (supported && !branches.some(({ target }) => target > 0)) counts.fallbackOnly++;
+  if (!supported && runtimeTargetSupport.examples.length < 8) {
+    runtimeTargetSupport.examples.push({
+      file: decision.file, update: decision.updateCount, event: decision.event_index,
+      actor: actor.id, target: target.id, ability, living,
+    });
+  }
+}
 const targetByRank = new Map();
 const targetByN = new Map();
 const targetByCategory = new Map();
 
 for await (const decision of readGzipLines(targetPath)) {
-  if (
-    !decision.rank_agree ||
-    decision.target == null ||
-    decision.enemies_fwd < 2
-  ) {
+  if (decision.file !== statusSnapshotFile) {
+    finishStatusSnapshots();
+    statusSnapshotFile = decision.file;
+  }
+  const hasLegacyRank = decision.rank_agree && decision.enemies_fwd >= 2;
+  if (decision.target == null || (!hasLegacyRank && !decision.replayed_stats)) {
     continue;
   }
   const episode = episodes.get(
@@ -218,6 +367,140 @@ for await (const decision of readGzipLines(targetPath)) {
   if (category === 'tear') {
     continue;
   }
+  const definition = firstItem && getItemDefinition(firstItem.modelId);
+  const wasDirectCombat = definition?.isDirectTargetCommand() &&
+    !['buy', 'sell', 'attackSomebody', 'danger'].includes(ability) &&
+    !episode.chosen?.items?.some((item) => item.ability === 'attackEveryEnemy');
+  const hasMatchingChoice = episode.chosen?.targetPlayerId === decision.target;
+  const recordedFog = decision.curses?.includes('fog') ?? false;
+  const replayedCurses = decision.replayed_status?.curses[decision.actor];
+  const replayedFog = replayedCurses?.includes('fog');
+  const replayedConfusion = decision.replayed_confusion?.[decision.actor];
+  if (wasDirectCombat && hasMatchingChoice && replayedCurses) {
+    targetStatusReplay.confirmed++;
+    if (recordedFog !== replayedFog) targetStatusReplay.fogDisagreements++;
+  }
+  if (wasDirectCombat && hasMatchingChoice && replayedConfusion !== undefined) {
+    targetStatusReplay.confusionConfirmed++;
+    if ((replayedConfusion > 0) !== (decision.confusion > 0)) {
+      targetStatusReplay.confusionDisagreements++;
+    }
+  }
+  const eligibleTarget = wasDirectCombat && hasMatchingChoice &&
+    decision.immediate_target_event !== false &&
+    !((replayedConfusion ?? decision.confusion) > 0) && !(replayedFog ?? recordedFog);
+  const replay = decision.replayed_stats;
+  if (eligibleTarget && replay) {
+    const living = Object.entries(replay.hp)
+      .filter(([id, hp]) => !replay.dead[id] && hp > 0)
+      .map(([id, hp]) => ({ id: Number(id), hp, cp: replay.cp[id], mp: decision.mp_fwd[id] }));
+    const replayActor = living.find((player) => player.id === decision.actor);
+    const replayTarget = living.find((player) => player.id === decision.target);
+    if (replayActor && replayTarget && decision.replayed_status && decision.replayed_confusion &&
+        decision.immediate_target_event && living.every(({ mp }) => Number.isFinite(mp))) {
+      const roster = living.map((player) => ({
+        ...player, team: decision.team_fwd?.[player.id],
+        guardian: decision.replayed_status.guardian[player.id],
+      }));
+      auditRuntimeTargetSupport({
+        decision, ability, living: roster,
+        actor: roster.find(({ id }) => id === replayActor.id),
+        target: roster.find(({ id }) => id === replayTarget.id),
+      });
+    }
+    if (replayActor && replayTarget && replayActor !== replayTarget &&
+        living.every(({ id, mp }) => !decision.team_fwd?.[id] && Number.isFinite(mp))) {
+      const sum = living.reduce((total, player) => total + botPlayerStrength(player), 0);
+      const score = botPlayerStrength(replayActor);
+      const gap = score - botPlayerStrength(replayTarget);
+      const side = score * living.length - sum;
+      const outcome = living.length === 2 ? 'forced' : gap === 0 || side === 0
+        ? 'ties' : gap * side > 0 ? 'matched' : 'mismatched';
+      fullStatReplayBoundary[outcome]++;
+      if (living.length > 2 && firstItem.category === 'weapons' && ability === '' &&
+          decision.immediate_target_event && decision.replayed_status && decision.replayed_confusion) {
+        const { guardian, curses } = decision.replayed_status;
+        const roster = living.map((player) => ({
+          ...player, guardian: guardian[player.id], curses: [...curses[player.id]].sort(),
+          confusion: decision.replayed_confusion[player.id],
+        }));
+        const actorState = roster.find(({ id }) => id === replayActor.id);
+        const targetState = roster.find(({ id }) => id === replayTarget.id);
+        if (!sameTargetStats(actorState, targetState)) {
+          const snapshot = JSON.stringify(roster);
+          if (!statusSnapshots.has(snapshot)) statusSnapshots.set(snapshot, new Map());
+          const pair = [replayActor.id, replayTarget.id].sort((first, second) => first - second).join(':');
+          statusSnapshots.get(snapshot).set(pair, {
+            actor: replayActor.id, target: replayTarget.id,
+            update: decision.updateCount, event: decision.event_index,
+          });
+        }
+      }
+      if (decision.replayed_status && living.length > 2) {
+        const { guardian } = decision.replayed_status;
+        const guardianScore = (player) => botPlayerStrength({
+          ...player, guardian: guardian[player.id],
+        });
+        const actorWithGuardian = guardianScore(replayActor);
+        const guardianGap = actorWithGuardian - guardianScore(replayTarget);
+        const guardianScores = living.map(guardianScore);
+        const guardianSide = actorWithGuardian * living.length -
+          guardianScores.reduce((total, strength) => total + strength, 0);
+        const guardianOutcome = guardianGap === 0 || guardianSide === 0
+          ? 'ties' : guardianGap * guardianSide > 0 ? 'matched' : 'mismatched';
+        guardianBoundary.withGuardianScore[guardianOutcome]++;
+        guardianBoundary.withoutGuardianScore[outcome]++;
+        if (guardianSide !== 0 && guardianScores.filter((score) => score === actorWithGuardian).length > 1) {
+          const withGuardian = living.map((player) => ({ ...player, guardian: guardian[player.id] }));
+          const tiedActor = withGuardian.find(({ id }) => id === replayActor.id);
+          const candidates = withGuardian.filter(({ id }) => id !== tiedActor.id)
+            .sort((first, second) => first.hp - second.hp || first.id - second.id);
+          const isTied = candidates.map((player) => sameTargetStats(tiedActor, player));
+          if (isTied.some(Boolean)) {
+            const counts = guardianBoundary.exactTieCandidates;
+            counts.rows++;
+            if (isTied[candidates.findIndex(({ id }) => id === replayTarget.id)]) counts.chosen++;
+            const openBoundary = botTargetProbabilities(candidates.map(({ hp }) => hp), ability, {
+              actor: tiedActor, players: withGuardian, targets: candidates,
+              drawExactTieBoundary: () => true,
+            });
+            const tieMass = openBoundary.reduce((total, probability, index) =>
+              total + (isTied[index] ? probability : 0), 0);
+            counts.expected += BOT_TARGET_EXACT_TIE_PERCENT * tieMass / 100;
+          }
+        }
+        if (guardianOutcome === 'ties') {
+          const tieReason = guardianScores.every((strength) => strength === actorWithGuardian)
+            ? 'allScoresEqual' : guardianSide === 0 ? 'actorAtMean' : 'targetScoreEqual';
+          guardianBoundary.tieReasons[tieReason]++;
+          if (tieReason === 'actorAtMean') {
+            const relativeTarget = guardianGap > 0 ? 'weaker'
+              : guardianGap < 0 ? 'stronger' : 'equal';
+            guardianBoundary.actorAtMeanTargets[relativeTarget]++;
+          }
+        }
+        const itemCount = episode.chosen.items.length;
+        const attackSize = guardianBoundary.byAttackItemCount[itemCount] ??=
+          { ties: 0, matched: 0, mismatched: 0 };
+        attackSize[guardianOutcome]++;
+        const defeatedCount = Object.keys(replay.hp).length - living.length;
+        const rosterSize = guardianBoundary.byDefeatedCount[defeatedCount] ??=
+          { ties: 0, matched: 0, mismatched: 0 };
+        rosterSize[guardianOutcome]++;
+        const actorHasGuardian = Boolean(guardian[replayActor.id]);
+        const targetHasGuardian = Boolean(guardian[replayTarget.id]);
+        const pairStatus = actorHasGuardian ? (targetHasGuardian ? 'both' : 'actorOnly')
+          : targetHasGuardian ? 'targetOnly'
+          : living.some(({ id }) => guardian[id]) ? 'elsewhere' : 'neither';
+        guardianBoundary.byPairStatus[pairStatus][guardianOutcome]++;
+      }
+      if (Object.keys(replay.hp).some((id) => replay.hp[id] !== decision.hp_fwd?.[id] ||
+          replay.cp[id] !== decision.cp_fwd?.[id] || replay.dead[id] !== decision.dead_fwd?.[id])) {
+        fullStatReplayBoundary.changedSnapshots++;
+      }
+    }
+  }
+  if (!hasLegacyRank) continue;
   const enemies = [...(decision.enemy_hp_fwd ?? [])].sort(
     (first, second) => first[1] - second[1] || first[0] - second[0],
   );
@@ -249,6 +532,105 @@ for await (const decision of readGzipLines(targetPath)) {
     context,
   );
   const previousProbabilities = botTargetProbabilities(enemies.map(([, hp]) => hp), ability);
+  const target = targets[targetRank];
+  if (wasDirectCombat && hasMatchingChoice) {
+    const origin = decision.immediate_target_event === true ? 'immediate'
+      : decision.immediate_target_event === false ? 'indirect' : 'unavailable';
+    targetProvenance[origin]++;
+  }
+  const targetUpdate = JSON.stringify([decision.file, decision.updateCount]);
+  if (targetUpdate !== currentTargetUpdate) {
+    currentTargetUpdate = targetUpdate;
+    directionsBySnapshot.clear();
+  }
+  if (context && target && eligibleTarget && firstItem.category === 'weapons' &&
+      ability === '' && decision.mp_endpoint_matched === true &&
+      players.every(({ id }) => !decision.team_fwd?.[id] && Number.isFinite(decision.mp_fwd[id]))) {
+    const direction = strictlyDominates(actor, target) ? 'down'
+      : strictlyDominates(target, actor) ? 'up' : undefined;
+    if (direction) {
+      const snapshot = JSON.stringify(players);
+      if (!directionsBySnapshot.has(snapshot)) {
+        directionsBySnapshot.set(snapshot, { up: [], down: [] });
+      }
+      const recorded = directionsBySnapshot.get(snapshot);
+      const choice = { actor, target, event: decision.event_index };
+      const otherDirection = direction === 'up' ? 'down' : 'up';
+      for (const other of recorded[otherDirection]) {
+        const [up, down] = direction === 'up' ? [choice, other] : [other, choice];
+        if (!strictlyDominates(up.actor, down.actor)) continue;
+        directionConflicts.count++;
+        if (directionConflicts.examples.length < 5) {
+          directionConflicts.examples.push({
+            file: decision.file, update: decision.updateCount, up, down, players,
+          });
+        }
+      }
+      recorded[direction].push(choice);
+    }
+  }
+  if (context && target && eligibleTarget &&
+      decision.mp_endpoint_matched === true &&
+      players.every((player) => Number.isFinite(decision.mp_fwd[player.id])) &&
+      players.every((player) => !decision.team_fwd?.[player.id]) &&
+      (decision.first_in_update || players.every(({ id, hp, cp }) =>
+        hp === decision.hp_bwd?.[id] && cp === decision.cp_bwd?.[id]))) {
+    targetBoundary.eligible++;
+    const living = players.filter((player) => !player.dead && player.hp > 0);
+    const scoreSum = living.reduce((sum, player) => sum + botPlayerStrength(player), 0);
+    const actorScore = botPlayerStrength(actor);
+    const targetScore = botPlayerStrength(target);
+    const actorSide = actorScore * living.length - scoreSum;
+    const targetSide = targetScore * living.length - scoreSum;
+    if (actorScore !== targetScore) {
+      const displacement = Math.max(0, Math.min(actorSide, targetSide),
+        -Math.max(actorSide, targetSide)) / living.length;
+      const bucket = displacement === 0 ? 'zero' : displacement <= 10 ? 'upTo10'
+        : displacement <= 30 ? 'upTo30' : 'over30';
+      sharedCutoffDisplacement[bucket]++;
+    }
+    if (actorScore === targetScore || actorSide === 0) {
+      actorRelativeBoundary.ties++;
+    } else {
+      const matched = (actorSide > 0) === (actorScore > targetScore);
+      const outcome = matched ? 'matched' : 'mismatched';
+      const actorMargin = Math.abs(actorSide) / living.length;
+      const band = actorMargin < 5 ? '0–5' : actorMargin < 15 ? '5–15' :
+        actorMargin < 30 ? '15–30' : actorMargin < 60 ? '30–60' : '60+';
+      const group = actorRelativeBoundary.byActorMargin[band] ??= { matched: 0, mismatched: 0 };
+      const targetMargin = Math.abs(actorScore - targetScore);
+      const targetBand = targetMargin <= 6 ? '1–6' : targetMargin <= 12 ? '7–12' :
+        targetMargin <= 18 ? '13–18' : targetMargin <= 30 ? '19–30' :
+        targetMargin <= 60 ? '31–60' : '61+';
+      const targetGroup = actorRelativeBoundary.byTargetMargin[targetBand] ??=
+        { matched: 0, mismatched: 0 };
+      actorRelativeBoundary[outcome]++;
+      group[outcome]++;
+      targetGroup[outcome]++;
+      const examples = actorRelativeBoundary.farthestMismatches;
+      if (!matched && (examples.length < 5 || actorMargin > examples.at(-1).actorMargin)) {
+        examples.push({
+          file: decision.file, update: decision.updateCount, event: decision.event_index,
+          actor: actor.id, target: target.id, actorMargin, targetMargin, living,
+        });
+        examples.sort((first, second) => second.actorMargin - first.actorMargin);
+        if (examples.length > 5) examples.pop();
+      }
+    }
+    if (actorScore === targetScore || actorSide === 0 || targetSide === 0) {
+      targetBoundary.ties++;
+    } else if ((actorSide > 0) !== (targetSide > 0)) {
+      targetBoundary.matched++;
+    } else {
+      targetBoundary.mismatched++;
+      if (targetBoundary.examples.length < 5) {
+        targetBoundary.examples.push({
+          file: decision.file, update: decision.updateCount, event: decision.event_index,
+          actor: actor.id, target: target.id, living,
+        });
+      }
+    }
+  }
   targetLikelihood.rows++;
   targetLikelihood.groupContextRows += context ? 1 : 0;
   targetLikelihood.negativeLogLikelihood -= Math.log(Math.max(probabilities[targetRank], Number.EPSILON));
@@ -284,6 +666,8 @@ for await (const decision of readGzipLines(targetPath)) {
     );
   });
 }
+
+finishStatusSnapshots();
 
 function targetSummary() {
   const observed = new Map();
@@ -436,6 +820,7 @@ const buyCounts = new Map();
 const buyByCategory = new Map();
 const buyByAffordability = new Map();
 const buyByAbility = new Map();
+let unaffordableBuyOffersExcluded = 0;
 const sellCounts = new Map();
 const sellPartner = new Map();
 const confusedCounts = new Map();
@@ -747,8 +1132,27 @@ for await (const episode of readGzipLines(episodePath)) {
 
   if (episode.kind === 'buy') {
     const definition = getItemDefinition(episode.offeredItemModelId);
-    const predicted = botShouldAcceptBuy(definitionItem(definition));
     const observed = episode.bought === true;
+    const replayedBalance = buyBalances.get(buyDecisionKey(
+      episode.file, episode.updateCount, episode.eventIndex, episode.actor, definition.id,
+    ));
+    let affordable;
+    if (replayedBalance !== undefined) {
+      buyBalanceAudit.replayed++;
+      affordable = replayedBalance >= definition.price;
+      if (!affordable) buyBalanceAudit.replayedUnaffordable++;
+    } else if (observed) {
+      buyBalanceAudit.inferredFromAcceptance++;
+      affordable = true;
+    } else {
+      buyBalanceAudit.legacy++;
+      affordable = episode.affordableByCp === true;
+    }
+    if (!affordable) {
+      unaffordableBuyOffersExcluded++;
+      continue;
+    }
+    const predicted = botShouldAcceptBuy(definitionItem(definition));
     addCount(buyCounts, 'rows');
     addCount(buyCounts, 'observed', observed ? 1 : 0);
     addCount(buyCounts, 'predicted', predicted ? 1 : 0);
@@ -758,14 +1162,13 @@ for await (const episode of readGzipLines(episodePath)) {
     addCount(buyByCategory, `rows|${key}`);
     addCount(buyByCategory, `observed|${key}`, observed ? 1 : 0);
     addCount(buyByCategory, `predicted|${key}`, predicted ? 1 : 0);
-    const affordable = episode.affordableByCp === true ? 'yes' : 'no';
-    addCount(buyByAffordability, `rows|${affordable}`);
-    addCount(buyByAffordability, `observed|${affordable}`, observed ? 1 : 0);
-    addCount(buyByAffordability, `predicted|${affordable}`, chance / 100);
+    addCount(buyByAffordability, 'rows|yes');
+    addCount(buyByAffordability, 'observed|yes', observed ? 1 : 0);
+    addCount(buyByAffordability, 'predicted|yes', predicted ? 1 : 0);
     const offeredAbility = episode.offeredAbility || '(plain)';
     addCount(buyByAbility, `rows|${offeredAbility}`);
     addCount(buyByAbility, `observed|${offeredAbility}`, observed ? 1 : 0);
-    addCount(buyByAbility, `predicted|${offeredAbility}`, chance / 100);
+    addCount(buyByAbility, `predicted|${offeredAbility}`, predicted ? 1 : 0);
   }
 
   if (episode.kind === 'attack') {
@@ -1054,6 +1457,16 @@ const report = {
     ...targetSummary(),
     decisionLikelihood: {
       ...targetLikelihood,
+      boundary: targetBoundary,
+      targetProvenance,
+      sharedCutoffDisplacement,
+      fullStatReplayBoundary,
+      targetStatusReplay,
+      guardianBoundary,
+      actorRelativeBoundary,
+      directionConflicts,
+      statusPartitionConflicts,
+      runtimeTargetSupport,
       negativeLogLikelihood: targetLikelihood.negativeLogLikelihood / Math.max(1, targetLikelihood.rows),
       previousNegativeLogLikelihood: targetLikelihood.previousNegativeLogLikelihood / Math.max(1, targetLikelihood.rows),
     },
@@ -1081,6 +1494,8 @@ const report = {
       rows: buyCounts.get('deterministic') ?? 0,
       disagreements: buyCounts.get('disagreements') ?? 0,
     },
+    unaffordableOffersExcluded: unaffordableBuyOffersExcluded,
+    balanceAudit: buyBalanceAudit,
     byCategoryAndPrice: groupedRates(buyByCategory),
     byAffordability: groupedRates(buyByAffordability),
     byOfferedAbility: groupedRates(buyByAbility),

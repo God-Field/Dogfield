@@ -3,6 +3,7 @@ import type { ItemDefinition } from '../../src/domain/models.ts';
 import type { Battle } from './battle.ts';
 import { engine } from '../engine.ts';
 import {
+  BOT_TARGET_EXACT_TIE_PERCENT,
   botAttackWeight as botItemAttackWeight,
   botShouldAcceptBuy,
   botDefenseChoiceWeight,
@@ -225,7 +226,7 @@ export function chooseBotTarget(
   battle: Battle,
   enemies: Player[],
   definition?: ItemDefinition,
-): number {
+): number | undefined {
   const rankedEnemies = [...enemies].sort(
     (firstEnemy, secondEnemy) =>
       firstEnemy.hp - secondEnemy.hp ||
@@ -234,18 +235,27 @@ export function chooseBotTarget(
   const actor = battle.game.players.find(
     (player) => player.id === battle.game.attackTurnPlayerId,
   );
-  const targetContext = actor
-    ? { actor, players: battle.alive, targets: rankedEnemies }
-    : undefined;
+  if (!rankedEnemies.length || !actor || actor.dead || actor.hp <= 0) {
+    return undefined;
+  }
+  const targetContext = {
+    actor,
+    players: battle.alive,
+    targets: rankedEnemies,
+    drawExactTieBoundary: () => battle.random.chance('botTargetTie', BOT_TARGET_EXACT_TIE_PERCENT),
+  };
   const probabilities = botTargetProbabilities(
     rankedEnemies.map((enemy) => enemy.hp),
     definition?.ability ?? '',
     targetContext,
   );
+  if (probabilities.every((probability) => probability === 0)) {
+    return battle.random.pick('botTargetFallback', rankedEnemies).id;
+  }
   const candidates = rankedEnemies.map((enemy, rank) => ({
     enemy: enemy,
     weight: probabilities[rank],
-  }));
+  })).filter((candidate) => candidate.weight > 0);
   return battle.random.pick(
     'botTarget',
     candidates,
@@ -584,11 +594,15 @@ export function buildBotAttackCommand(
       if (enemies.length === 0) {
         return null;
       }
-      command.targetPlayerId = chooseBotTarget(
+      const targetPlayerId = chooseBotTarget(
         battle,
         enemies,
         definition,
       );
+      if (targetPlayerId === undefined) {
+        return null;
+      }
+      command.targetPlayerId = targetPlayerId;
     }
   }
   if (definition.ability === 'exchange') {

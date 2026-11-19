@@ -22,23 +22,39 @@ export interface BotItem {
   };
 }
 
-type BotTargetPlayer = Pick<Player, 'id' | 'hp' | 'mp' | 'cp' | 'dead'>;
+type BotTargetPlayer = Pick<Player, 'id' | 'hp' | 'mp' | 'cp' | 'dead' | 'guardian'>;
 
 export interface BotTargetContext {
   actor: BotTargetPlayer;
   players: readonly BotTargetPlayer[];
   targets: readonly BotTargetPlayer[];
+  drawExactTieBoundary?: () => boolean;
 }
 
-// Fitted approximation of the creator's private strength grouping, not official
-// coefficients. A soft preference accounts for the unknown scoring and cutoff.
-const TARGET_OPPOSITE_GROUP_WEIGHT = 3;
+// The best held-out hard-boundary fit is close to this simple integer ratio.
+// These are reconstructed coefficients, not creator-confirmed constants.
+const TARGET_HP_STRENGTH_WEIGHT = 3;
+const TARGET_MP_STRENGTH_WEIGHT = 2;
+const TARGET_CP_STRENGTH_WEIGHT = 1;
+const TARGET_GUARDIAN_STRENGTH = 90;
+// Estimated from recorded attacks that had both tied and strictly eligible enemies.
+export const BOT_TARGET_EXACT_TIE_PERCENT = 40;
 
-function botPlayerStrength(player: BotTargetPlayer): number {
-  return player.hp + player.mp / 2 + player.cp / 3;
+export function sameTargetStats(first: BotTargetPlayer, second: BotTargetPlayer): boolean {
+  return first.hp === second.hp && first.mp === second.mp && first.cp === second.cp &&
+    (first.guardian || '') === (second.guardian || '');
 }
 
-function applyTargetGroupPreference(
+export function botPlayerStrength(player: BotTargetPlayer): number {
+  return (
+    player.hp * TARGET_HP_STRENGTH_WEIGHT +
+    player.mp * TARGET_MP_STRENGTH_WEIGHT +
+    player.cp * TARGET_CP_STRENGTH_WEIGHT +
+    (player.guardian ? TARGET_GUARDIAN_STRENGTH : 0)
+  );
+}
+
+function applyTargetGroupBoundary(
   probabilities: number[],
   context?: BotTargetContext,
 ): number[] {
@@ -49,18 +65,35 @@ function applyTargetGroupPreference(
   if (livingPlayers.length < 2) {
     return probabilities;
   }
-  const totalStrength = livingPlayers.reduce(
-    (total, player) => total + botPlayerStrength(player),
-    0,
-  );
-  const groupBoundary = totalStrength / livingPlayers.length;
-  const actorIsUpper = botPlayerStrength(context.actor) >= groupBoundary;
+  const scores = livingPlayers.map(botPlayerStrength);
+  const scoreSum = scores.reduce((sum, score) => sum + score, 0);
+  const actorScore = botPlayerStrength(context.actor);
+  // The lobby mean determines the direction. The acting player's score
+  // determines where to divide the eligible targets in that direction.
+  const meanDirection = Math.sign(actorScore * livingPlayers.length - scoreSum);
+  if (meanDirection === 0 && scores.every((score) => score === actorScore)) {
+    return probabilities.map(() => 1 / probabilities.length);
+  }
+  // With three players, only a strongest attacker aims down.
+  const direction = livingPlayers.length === 3
+    ? (actorScore === Math.max(...scores) ? 1 : -1)
+    : meanDirection;
+  let tiesAreEligible: boolean | undefined;
   const weights = probabilities.map((probability, targetIndex) => {
-    const targetIsUpper = botPlayerStrength(context.targets[targetIndex]) >= groupBoundary;
-    const groupWeight = actorIsUpper === targetIsUpper ? 1 : TARGET_OPPOSITE_GROUP_WEIGHT;
-    return probability * groupWeight;
+    const target = context.targets[targetIndex];
+    const difference = actorScore - botPlayerStrength(target);
+    // At the mean, recorded choices mainly aim upward and can include tied targets.
+    if (direction === 0) return difference <= 0 ? probability : 0;
+    if (difference === 0 && sameTargetStats(context.actor, target)) {
+      tiesAreEligible ??= context.drawExactTieBoundary?.() ?? false;
+      return tiesAreEligible ? probability : 0;
+    }
+    return direction * difference > 0 ? probability : 0;
   });
   const totalWeight = weights.reduce((total, weight) => total + weight, 0);
+  if (totalWeight === 0) {
+    return weights;
+  }
   return weights.map((weight) => weight / totalWeight);
 }
 
@@ -162,7 +195,7 @@ export function botTargetProbabilities(
     }
     return probability;
   });
-  return applyTargetGroupPreference(probabilities, context);
+  return applyTargetGroupBoundary(probabilities, context);
 }
 
 const TEAR_SELF_PERCENT_WITH_FEW_PLAYERS = 7;

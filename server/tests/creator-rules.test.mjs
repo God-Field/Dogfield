@@ -109,7 +109,7 @@ test('bot purchases do not consult the random generator', () => {
   assert.equal(battle.chooseBotBuyDecision(148), false);
 });
 
-test('bot targeting uses the actor strength and all living players to prefer the opposite group', () => {
+test('bot targeting uses the lobby mean to decide which direction to aim', () => {
   const actor = { id: 1, hp: 80, mp: 10, cp: 10 };
   const targets = [
     { id: 2, hp: 10, mp: 10, cp: 10 },
@@ -117,16 +117,17 @@ test('bot targeting uses the actor strength and all living players to prefer the
     { id: 4, hp: 90, mp: 10, cp: 10 },
   ];
   const players = [actor, ...targets];
-  const base = botTargetProbabilities(targets.map((target) => target.hp), '');
   const upper = botTargetProbabilities(targets.map((target) => target.hp), '', {
     actor, players, targets,
   });
-  assert.ok(Math.abs((upper[0] / base[0]) / (upper[2] / base[2]) - 3) < 1e-12);
+  assert.ok(upper[0] > 0);
+  assert.ok(upper[1] > 0);
+  assert.equal(upper[2], 0);
   actor.hp = 1;
   const lower = botTargetProbabilities(targets.map((target) => target.hp), '', {
     actor, players, targets,
   });
-  assert.ok(Math.abs((lower[2] / base[2]) / (lower[0] / base[0]) - 3) < 1e-12);
+  assert.ok(lower.every((probability) => probability > 0));
   const withDeadPlayer = botTargetProbabilities(targets.map((target) => target.hp), '', {
     actor, players: [...players, { id: 5, hp: 99, mp: 99, cp: 99, dead: true }], targets,
   });
@@ -134,32 +135,107 @@ test('bot targeting uses the actor strength and all living players to prefer the
   assert.ok(Math.abs(lower.reduce((total, probability) => total + probability, 0) - 1) < 1e-12);
 });
 
-test('bot strength estimation includes MP and currency with less weight than HP', () => {
-  const actor = { id: 1, hp: 30, mp: 0, cp: 0 };
+test('bot strength scoring uses all three statuses with HP weighted highest', () => {
+  const actor = { id: 1, hp: 33, mp: 0, cp: 0 };
   const targets = [
-    { id: 2, hp: 1, mp: 0, cp: 0 },
-    { id: 3, hp: 45, mp: 0, cp: 0 },
+    { id: 2, hp: 30, mp: 0, cp: 0 },
+    { id: 3, hp: 66, mp: 0, cp: 0 },
+    { id: 4, hp: 6, mp: 0, cp: 0 },
   ];
-  const probabilities = () => botTargetProbabilities([1, 45], '', {
+  const probabilities = () => botTargetProbabilities([30, 66, 6], '', {
     actor, players: [actor, ...targets], targets,
   });
   const before = probabilities();
+  assert.equal(before[0], 0);
+  assert.equal(before[1], 1);
+  targets[0].cp = 99;
+  const afterCurrency = probabilities();
+  assert.ok(afterCurrency[0] > 0);
+  assert.equal(afterCurrency[2], 0);
+  targets[0].cp = 0;
   targets[0].mp = 99;
-  assert.ok(probabilities()[0] < before[0]);
+  const afterMp = probabilities();
+  assert.ok(afterMp[0] > 0);
+  assert.equal(afterMp[2], 0);
   targets[0].mp = 0;
   targets[0].cp = 99;
-  assert.notDeepEqual(probabilities(), before);
+  assert.equal(botTargetProbabilities([30, 66, 6], '', {
+    actor,
+    players: [actor, ...targets, { id: 5, hp: 99, mp: 99, cp: 99, dead: true }],
+    targets,
+  })[0], afterCurrency[0]);
+});
+
+test('a guardian can change the direction of an attack', () => {
+  const actor = { id: 1, hp: 45, mp: 10, cp: 20 };
+  const weaker = { id: 2, hp: 20, mp: 10, cp: 20, guardian: undefined };
+  const stronger = { id: 3, hp: 40, mp: 10, cp: 20 };
+  const targets = [weaker, stronger];
+  const probabilities = () => botTargetProbabilities([20, 40], '', {
+    actor, players: [actor, ...targets], targets,
+  });
+  assert.ok(probabilities().every((probability) => probability > 0));
+  weaker.guardian = 'earth';
+  assert.deepEqual(probabilities(), [1, 0]);
+});
+
+test('a bot exactly at the mean can target stronger or tied enemies', () => {
+  const actor = { id: 1, hp: 40, mp: 10, cp: 20 };
+  const targets = [
+    { ...actor, id: 2, hp: 30 },
+    { ...actor, id: 3 },
+    { ...actor, id: 4, hp: 50 },
+  ];
+  const probabilities = botTargetProbabilities(targets.map(({ hp }) => hp), '', {
+    actor, players: [actor, ...targets], targets,
+  });
+  assert.equal(probabilities[0], 0);
+  assert.ok(probabilities[1] > 0);
+  assert.ok(probabilities[2] > 0);
+  const tied = targets.map((target) => ({ ...actor, id: target.id }));
+  assert.deepEqual(botTargetProbabilities(tied.map(({ hp }) => hp), '', {
+    actor, players: [actor, ...tied], targets: tied,
+  }), [1 / 3, 1 / 3, 1 / 3]);
+});
+
+test('one boundary draw can admit identical opponents while aiming down', () => {
+  const actor = { id: 1, hp: 40, mp: 10, cp: 20 };
+  const targets = [
+    { ...actor, id: 2, hp: 10 },
+    { ...actor, id: 3 },
+    { ...actor, id: 4 },
+    { ...actor, id: 5, hp: 38, mp: 13 },
+    { ...actor, id: 6, hp: 50 },
+  ];
+  let draws = 0;
+  const probabilities = (allowTies) => botTargetProbabilities(targets.map(({ hp }) => hp), '', {
+    actor, players: [actor, ...targets], targets,
+    drawExactTieBoundary: () => {
+      draws++;
+      return allowTies;
+    },
+  });
+  assert.deepEqual(probabilities(false), [1, 0, 0, 0, 0]);
+  const admitted = probabilities(true);
+  assert.ok(admitted.slice(0, 3).every((probability) => probability > 0));
+  assert.deepEqual(admitted.slice(3), [0, 0]);
+  assert.equal(draws, 2);
 });
 
 test('the running battle passes the acting bot status into target selection', () => {
-  const actor = { id: 1, hp: 80, mp: 10, cp: 10, items: [] };
+  const actor = { id: 1, hp: 95, mp: 10, cp: 10, items: [] };
   const enemies = [
     { id: 2, hp: 10, mp: 10, cp: 10, items: [] },
     { id: 3, hp: 90, mp: 10, cp: 10, items: [] },
   ];
   const game = { ...createGame(), players: [actor, ...enemies] };
   const battle = new Battle(game, new FixedDrawRandom(0.6));
-  assert.equal(battle.chooseBotTarget(enemies), 2);
-  actor.hp = 1;
+  assert.ok(enemies.some(({ id }) => id === battle.chooseBotTarget(enemies)));
+  actor.hp = 80;
   assert.equal(battle.chooseBotTarget(enemies), 3);
+  actor.hp = 5;
+  const weakActorTargets = botTargetProbabilities(enemies.map(({ hp }) => hp), '', {
+    actor, players: [actor, ...enemies], targets: enemies,
+  });
+  assert.ok(weakActorTargets.every((probability) => probability > 0));
 });

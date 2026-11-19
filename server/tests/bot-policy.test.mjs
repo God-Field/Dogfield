@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { Battle } from '../battle/battle.ts';
 import { getItemDefinition } from '../engine.ts';
 import { Random } from '../random.ts';
-import { botShouldAcceptBuy } from '../battle/bot-policy.ts';
+import {
+  botShouldAcceptBuy,
+  botTargetProbabilities,
+} from '../battle/bot-policy.ts';
 
 const createPlayer = (id, items = []) => ({
   id,
@@ -186,10 +189,16 @@ const createRankedEnemies = (count) =>
 
 const sampleTargetShares = (enemies, definition, sampleCount = 2000) => {
   const counts = new Map(enemies.map((enemy) => [enemy.id, 0]));
-  const battle = new Battle(createGame([...enemies]), new Random(1));
+  const probabilities = botTargetProbabilities(
+    enemies.map((enemy) => enemy.hp),
+    definition?.ability ?? '',
+  );
   for (let seed = 1; seed <= sampleCount; seed++) {
-    battle.random = new Random(seed);
-    const targetPlayerId = battle.chooseBotTarget(enemies, definition);
+    const targetPlayerId = new Random(seed).pick(
+      'botTarget',
+      enemies.map((enemy, rank) => ({ enemy, weight: probabilities[rank] })),
+      (candidate) => candidate.weight,
+    ).enemy.id;
     counts.set(targetPlayerId, counts.get(targetPlayerId) + 1);
   }
   return {
@@ -243,6 +252,46 @@ test('bot targeting prefers healthier targets for drain and status cards', () =>
     otherShares.strongest > 0.22 && otherShares.strongest < 0.32,
     `other targeted abilities should prefer the strongest, got ${otherShares.strongest}`,
   );
+});
+
+test('a bot above the lobby mean targets players weaker than itself', () => {
+  const actor = createPlayer(1);
+  Object.assign(actor, { hp: 70, mp: 10, cp: 10 });
+  const loneLowerTarget = createPlayer(2);
+  Object.assign(loneLowerTarget, { hp: 10, mp: 10, cp: 10 });
+  const upperTarget = createPlayer(3);
+  Object.assign(upperTarget, { hp: 80, mp: 10, cp: 10 });
+  const otherUpperTarget = createPlayer(4);
+  Object.assign(otherUpperTarget, { hp: 55, mp: 10, cp: 10 });
+  const targets = [loneLowerTarget, otherUpperTarget, upperTarget];
+  const probabilities = botTargetProbabilities(
+    targets.map((target) => target.hp),
+    '',
+    {
+      actor,
+      players: [actor, ...targets],
+      targets,
+    },
+  );
+
+  assert.ok(probabilities[0] > 0);
+  assert.ok(probabilities[1] > 0);
+  assert.equal(probabilities[2], 0);
+});
+
+test('bot targeting picks a legal enemy when its estimated opposite group has none', () => {
+  const actor = createPlayer(1);
+  Object.assign(actor, { hp: 70, mp: 10, cp: 10, team: 1 });
+  const teammate = createPlayer(2);
+  Object.assign(teammate, { hp: 10, mp: 10, cp: 10, team: 1 });
+  const sameGroupEnemy = createPlayer(3);
+  Object.assign(sameGroupEnemy, { hp: 80, mp: 10, cp: 10, team: 2 });
+  const game = createGame([actor, teammate, sameGroupEnemy]);
+  const battle = new Battle(game, new Random(1));
+
+  assert.equal(battle.chooseBotTarget([sameGroupEnemy]), sameGroupEnemy.id);
+  const missingActorBattle = new Battle(createGame([sameGroupEnemy]), new Random(1));
+  assert.equal(missingActorBattle.chooseBotTarget([sameGroupEnemy]), undefined);
 });
 
 test('bot Buy targets a uniform living enemy', () => {

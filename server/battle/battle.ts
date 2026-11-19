@@ -1478,7 +1478,7 @@ export class Battle {
   chooseBotTarget(
     enemies: Player[],
     definition?: ItemDefinition,
-  ): number {
+  ): number | undefined {
     return botAI.chooseBotTarget(this, enemies, definition);
   }
 
