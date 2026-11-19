@@ -62,6 +62,22 @@ export function botPlayerStrength(player: BotTargetPlayer): number {
   );
 }
 
+function meanStrengthSideSelector(
+  meanScore: number,
+  drawExactTieBoundary: (() => boolean) | undefined,
+): (score: number, playerId: number) => number {
+  const tieSides = new Map<number, number>();
+  return (score, playerId) => {
+    if (score !== meanScore) {
+      return score > meanScore ? 1 : -1;
+    }
+    if (!tieSides.has(playerId)) {
+      tieSides.set(playerId, drawExactTieBoundary?.() ? 1 : -1);
+    }
+    return tieSides.get(playerId)!;
+  };
+}
+
 function applyTargetGroupBoundary(
   probabilities: number[],
   ability: string,
@@ -85,14 +101,10 @@ function applyTargetGroupBoundary(
       return probabilities.map(() => 1 / probabilities.length);
     }
     const meanScore = scoreSum / livingPlayers.length;
-    const tieSides = new Map<number, number>();
-    const groupSide = (score: number, playerId: number): number => {
-      if (score !== meanScore) return score > meanScore ? 1 : -1;
-      if (!tieSides.has(playerId)) {
-        tieSides.set(playerId, context.drawExactTieBoundary?.() ? 1 : -1);
-      }
-      return tieSides.get(playerId)!;
-    };
+    const groupSide = meanStrengthSideSelector(
+      meanScore,
+      context.drawExactTieBoundary,
+    );
     const weights = probabilities.map((probability, targetIndex) => {
       const target = context.targets[targetIndex];
       return groupSide(botPlayerStrength(target), target.id) === 1 ? probability : 0;
@@ -131,14 +143,10 @@ function applyTargetGroupBoundary(
     return probabilities.map(() => 1 / probabilities.length);
   }
   const meanScore = scoreSum / livingPlayers.length;
-  const tieSides = new Map<number, number>();
-  const groupSide = (score: number, playerId: number): number => {
-    if (score !== meanScore) return score > meanScore ? 1 : -1;
-    if (!tieSides.has(playerId)) {
-      tieSides.set(playerId, context.drawExactTieBoundary?.() ? 1 : -1);
-    }
-    return tieSides.get(playerId)!;
-  };
+  const groupSide = meanStrengthSideSelector(
+    meanScore,
+    context.drawExactTieBoundary,
+  );
   const actorSide = groupSide(actorScore, actor.id);
   const weights = probabilities.map((probability, targetIndex) => {
     const target = context.targets[targetIndex];
