@@ -427,7 +427,7 @@ const VALUABLE_WEAPON_ABILITIES: ReadonlySet<string> = new Set([
   'reflectMiracle',
   'setElement',
 ]);
-const BUY_WEAPON_PRICE_LIMIT = 10;
+const BUY_WEAPON_PRICE_LIMIT = 9;
 const BUY_ARMOR_PRICE_LIMIT = 10;
 const BUY_STRONG_ARMOR_MIN_DEFENSE = 9;
 const BUY_STRONG_ARMOR_PRICE_LIMIT = 15;
@@ -520,7 +520,7 @@ export function botShouldAcceptBuy(item: BotItem): boolean {
     return false;
   }
   if (item.category.key === 'weapons') {
-    const isCheap = item.price < BUY_WEAPON_PRICE_LIMIT;
+    const isCheap = item.price <= BUY_WEAPON_PRICE_LIMIT;
     const isValuableEffect = VALUABLE_WEAPON_ABILITIES.has(item.ability);
     return isCheap || item.isPlusAttack || isValuableEffect;
   }
