@@ -47,6 +47,57 @@ const DISEASE_DAMAGE: Record<string, number> = {
   hell: 5,
 };
 
+type AttackTargeting =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'danger' }
+  | { readonly kind: 'selected' }
+  | {
+    readonly kind: 'enemies';
+    readonly cycles: number;
+    readonly guardian: boolean;
+  };
+
+function getAttackTargeting(
+  player: Player,
+  command: Command,
+  definition: ItemDefinition,
+  itemDefinitions: readonly ItemDefinition[],
+  guardian: boolean,
+  convertsMPToAttack: boolean,
+): AttackTargeting {
+  const ability = definition.ability;
+  if (ability === 'callPhenomenon') {
+    return { kind: 'none' };
+  }
+
+  const cycles = itemDefinitions.filter(
+    (itemDefinition) => itemDefinition.ability === 'attackEveryEnemy',
+  ).length;
+  if (cycles > 0 || definition.hitRate > 0) {
+    return { kind: 'enemies', cycles: Math.max(cycles, 1), guardian: false };
+  }
+
+  const danger = ability === 'danger';
+  const redundantCurseRemovalTarget =
+    command.targetPlayerId === player.id &&
+    (ability === 'removeMildCurses' || ability === 'removeAllCurses');
+  const hasRequestedTarget = command.targetPlayerId !== undefined &&
+    !redundantCurseRemovalTarget;
+  const directTarget = definition.isDirectTargetCommand(guardian) ||
+    convertsMPToAttack ||
+    (!guardian && (ability === 'boostMPAndAddCurse' || hasRequestedTarget));
+
+  if (ability === 'exchange' || (!danger && !directTarget)) {
+    return { kind: 'none' };
+  }
+  if (danger) {
+    return { kind: 'danger' };
+  }
+  return guardian
+    ? { kind: 'enemies', cycles: 1, guardian: true }
+    : { kind: 'selected' };
+}
+
 export class Battle {
 
   private playedThisSubmit = new Set<number>();
@@ -910,33 +961,23 @@ export class Battle {
       attack,
       firstDefinition,
     );
-    const ability = firstDefinition.ability;
     const guardian = attack.guardian !== undefined;
-    if (ability === 'callPhenomenon') {
-      return false;
-    }
-    const everyEnemyCount = itemDefinitions.filter(
-      (itemDefinition) => itemDefinition.ability === 'attackEveryEnemy',
-    ).length;
-    const targetsEveryEnemy = everyEnemyCount > 0 || firstDefinition.hitRate > 0;
-    const isDanger = ability === 'danger';
-    const hasRedundantCurseRemovalTarget =
-      command.targetPlayerId === player.id &&
-      (ability === 'removeMildCurses' || ability === 'removeAllCurses');
-    const hasExplicitTarget = command.targetPlayerId !== undefined &&
-      !hasRedundantCurseRemovalTarget;
-    const needsDirectTarget = firstDefinition.isDirectTargetCommand(guardian)
-      || convertsMPToAttack
-      || (!guardian && (ability === 'boostMPAndAddCurse' || hasExplicitTarget));
-    const needsSingleTarget = ability !== 'exchange' && (isDanger || needsDirectTarget);
-    if (!targetsEveryEnemy && !needsSingleTarget) {
+    const targeting = getAttackTargeting(
+      player,
+      command,
+      firstDefinition,
+      itemDefinitions,
+      guardian,
+      convertsMPToAttack,
+    );
+    if (targeting.kind === 'none') {
       return false;
     }
     let targets: Player[];
-    if (isDanger && !targetsEveryEnemy) {
+    if (targeting.kind === 'danger') {
       // Danger chooses its recipient when each strike resolves.
       targets = [player];
-    } else if (targetsEveryEnemy || guardian) {
+    } else if (targeting.kind === 'enemies') {
       targets = this.alive.filter((candidatePlayer) =>
         areEnemies(player, candidatePlayer),
       );
@@ -944,7 +985,7 @@ export class Battle {
         delete this.game.attacks;
         return false;
       }
-      if (!targetsEveryEnemy) {
+      if (targeting.guardian) {
         targets = [this.random.pick('guardianTarget', targets)];
       }
     } else {
@@ -956,8 +997,10 @@ export class Battle {
       )];
     }
     this.game.attacks = createAttackQueue(attack, targets, this.random, {
-      cycleCount: Math.max(everyEnemyCount, 1),
-      strikesPerTarget: ability === 'attackTwice' ? DOUBLE_ATTACK_FACTOR : 1,
+      cycleCount: targeting.kind === 'enemies' ? targeting.cycles : 1,
+      strikesPerTarget: firstDefinition.ability === 'attackTwice'
+        ? DOUBLE_ATTACK_FACTOR
+        : 1,
     });
     this.resolveAttackTarget();
     return true;
