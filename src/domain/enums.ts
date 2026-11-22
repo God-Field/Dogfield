@@ -73,6 +73,7 @@ const languageCodes: ReadonlyMap<number, string> = new Map([
   [6, 'ru'],
   [7, 'cn'],
   [8, 'tw'],
+  [9, 'tr'],
 ]);
 
 export class Language {
@@ -128,6 +129,7 @@ export const LanguagePt = new Language("pt", 5, "pt");
 export const LanguageRu = new Language("ru", 6, "ru");
 export const LanguageZhHans = new Language("zh-hans", 7, "zhHans");
 export const LanguageZhHant = new Language("zh-hant", 8, "zhHant");
+export const LanguageTr = new Language("tr", 9, "tr");
 export const SideLeft = new Side(0, "left");
 export const SideRight = new Side(1, "right");
 export const GameModeTraining = new GameMode("training", 0, "training");
@@ -139,7 +141,7 @@ export const TeamTeam2 = new Team(2, 2, "team2");
 export const TeamTeam3 = new Team(3, 3, "team3");
 export const TeamTeam4 = new Team(4, 4, "team4");
 export const TextAlignmentLeft = new TextAlignment("left", 0, "left");
-export const allLanguages = [LanguageEn, LanguageEs, LanguageFr, LanguageJa, LanguageKo, LanguagePt, LanguageRu, LanguageZhHans, LanguageZhHant];
+export const allLanguages = [LanguageEn, LanguageEs, LanguageFr, LanguageJa, LanguageKo, LanguagePt, LanguageRu, LanguageZhHans, LanguageZhHant, LanguageTr];
 export const allGuardians = [GuardianMars, GuardianMercury, GuardianJupiter, GuardianSaturn, GuardianUranus, GuardianPluto, GuardianNeptune, GuardianVenus, GuardianEarth, GuardianMoon];
 export const allSides = [SideLeft, SideRight];
 export const allGameModes = [GameModeTraining, GameModePrivate, GameModeDuel];

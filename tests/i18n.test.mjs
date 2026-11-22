@@ -18,6 +18,14 @@ test('all locale ability keys match English', () => {
   }
 });
 
+test('Turkish locale is registered with the complete catalog', () => {
+  const turkishData = JSON.parse(fs.readFileSync(path.join(localeDirectory, 'tr.json'), 'utf8'));
+
+  assert.equal(turkishData.texts.langNames.tr, 'Türkçe');
+  assert.deepEqual(Object.keys(turkishData.texts.abilities).sort(), englishTextKeys);
+  assert.equal(turkishData.items.length, englishData.items.length);
+});
+
 test('locale item catalogs match English except for translated names', () => {
   for (const localeFile of localeFiles) {
     const localeData = JSON.parse(fs.readFileSync(path.join(localeDirectory, localeFile), 'utf8'));

@@ -29,6 +29,7 @@ function parseArguments(argv) {
     games: 4,
     concurrency: null,
     players: 2,
+    lang: 'en',
     playersList: null,
     seconds: 180,
     noGlobalLimit: false,
@@ -60,6 +61,7 @@ function parseArguments(argv) {
       case '--games': options.games = Number(next()); break;
       case '--concurrency': options.concurrency = Number(next()); break;
       case '--players': options.players = Number(next()); break;
+      case '--lang': options.lang = next(); break;
       case '--players-list': options.playersList = next().split(',').filter(Boolean).map(Number); break;
       case '--seconds': options.seconds = Number(next()); break;
       case '--no-global-limit': options.noGlobalLimit = true; options.seconds = 0; break;
@@ -169,6 +171,7 @@ async function main() {
       `  --games N              number of games (default 4)\n` +
       `  --concurrency N        simultaneous games (default min(games, 6))\n` +
       `  --players N            single player count (default 2)\n` +
+      `  --lang CODE            training language (default en)\n` +
       `  --players-list A,B,C   cycle player counts across games\n` +
       `  --seconds N            per-game global limit; 0 disables it (default 180)\n` +
       `  --no-global-limit      let each game run to game over\n` +
@@ -239,6 +242,7 @@ async function main() {
     const args = [
       script,
       '--players', String(job.playerCount),
+      '--lang', options.lang,
       '--gf', job.gf === null ? 'none' : String(job.gf),
       '--seed', job.seed,
       '--log', job.log,

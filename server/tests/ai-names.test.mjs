@@ -28,6 +28,13 @@ test('AI names follow the language-specific length and character rules', () => {
     assert.match(name, /^[А-ЯЁ][а-яё]{2,5}$/);
   }
 
+  const turkishNames = generateAiNames(8, [], 'tr', new Random(654));
+  assert.equal(new Set(turkishNames.map((name) => name[0])).size, 8);
+  for (const name of turkishNames) {
+    assert.match(name, /^[A-ZÇĞİÖŞÜ][abcçdefgğhıijklmnoöprsştuüvyz]{2,5}$/);
+    assert.notEqual(name[0], 'Ğ');
+  }
+
   const japaneseNames = generateAiNames(8, [], 'ja', new Random(789));
   for (const name of japaneseNames) {
     assert.match(name, /^[\u3040-\u30ff]{2,5}$/);
@@ -71,6 +78,7 @@ test('alphabetic names recycle initials instead of throwing', () => {
 test('feasibility counts match each language name space', () => {
   assert.equal(countPossibleAiNames('en'), 27_916_855);
   assert.equal(countPossibleAiNames('ru'), 343_584_450);
+  assert.equal(countPossibleAiNames('tr'), 131_348_616);
   assert.equal(countPossibleAiNames('ja'), 126_813_235_564);
   assert.equal(countPossibleAiNames('ko'), 386_923_740);
   assert.equal(countPossibleAiNames('zh-hans'), 3_985_002_504);

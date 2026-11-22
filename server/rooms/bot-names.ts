@@ -15,6 +15,8 @@ import { Random } from '../random.ts';
  * - Alphabetic initials are shuffled and sampled without replacement instead
  *   of being consumed alphabetically.
  * - Russian was added with all 33 Cyrillic initials and Russian vowels.
+ * - Turkish uses its 29-letter alphabet and eight vowels; ğ is allowed
+ *   inside names but excluded as an initial, with Turkish-aware casing.
  * - Korean and Traditional Chinese were added to the character-run branch.
  * - The character pools were recovered from live samples: 166 Japanese kana,
  *   140 Korean Hangul syllables, 251 Simplified Chinese characters, and 278
@@ -49,6 +51,7 @@ type LanguageRules = CharacterRunRules | AlphabeticRules;
 
 const ENGLISH_CHARACTERS = 'abcdefghijklmnopqrstuvwxyz';
 const RUSSIAN_CHARACTERS = 'абвгдежзийклмнопрстуфхцчшщъыьэюяё';
+const TURKISH_CHARACTERS = 'abcçdefgğhıijklmnoöprsştuüvyz';
 const JAPANESE_CHARACTERS = 'ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわをんァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヲンヴヵヶー';
 const KOREAN_CHARACTERS = '가갸거겨고교구규그기나냐너녀노뇨누뉴느니다댜더뎌도됴두듀드디라랴러려로료루류르리마먀머며모묘무뮤므미바뱌버벼보뵤부뷰브비사샤서셔소쇼수슈스시아야어여오요우유으이자쟈저져조죠주쥬즈지차챠처쳐초쵸추츄츠치카캬커켜코쿄쿠큐크키타탸터텨토툐투튜트티파퍄퍼펴포표푸퓨프피하햐허혀호효후휴흐히';
 const SIMPLIFIED_CHINESE_CHARACTERS = '一三上不丝中丽乃之乌乐乡了二五亚伊余你佬信像克兔八兰关兵具冬冲击刀创前剑剪劫勇化北十南卟原双只可司名后吹咩唯嘎因土块坡坦大太奈奔女好如娅子孩宇宗宙定对寺封小尼山岩巧巴布师希带帽幡庄庆强思性恋恒惠慕我打把拉敌教斯新方无日旧是曜最月有木杨极果枪标校根桃森椒橙比水永没治泰津浆浦润火熊爱牙牛特犬狐狗狸狼猪猫猴玉王玩球璃生田男画登白百的皮真眼石碎神程穗空窝粽紫红纳组绪绿羊美羽翻老者肉舔芽苔英苹草药莓莫蓝虚蛛蜘蝶血西记译谷豆财越跳轴辈辑辛辣达进追邪郎部酱里野金钻长阪限隆隈雏雪露青面鞍骏骑魅鱼鲁鸡鸭麦麻黄黑鼻龙';
@@ -56,6 +59,7 @@ const TRADITIONAL_CHINESE_CHARACTERS = '一丁七三上下丙中之乙九乾二�
 
 const ENGLISH_VOWELS = Object.freeze(['a', 'e', 'i', 'o', 'u']);
 const RUSSIAN_VOWELS = Object.freeze(['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я']);
+const TURKISH_VOWELS = Object.freeze(['a', 'e', 'ı', 'i', 'o', 'ö', 'u', 'ü']);
 const LATIN_NAME_LENGTHS = Object.freeze([3, 4, 5, 6]);
 const JAPANESE_NAME_LENGTHS = Object.freeze([2, 2, 3, 3, 4, 4, 5]);
 const KOREAN_NAME_LENGTHS = Object.freeze([1, 2, 2, 3, 3, 4]);
@@ -78,6 +82,18 @@ const RUSSIAN_RULES: AlphabeticRules = Object.freeze({
   initialExcludedCharacters: new Set<string>(),
   nameLengths: LATIN_NAME_LENGTHS,
   vowels: RUSSIAN_VOWELS,
+  excludedAfterVowel: new Set<string>(),
+  excludedAfterConsonantVowel: new Set<string>(),
+  specialFinalCharacter: null,
+});
+
+const TURKISH_RULES: AlphabeticRules = Object.freeze({
+  branch: 'alphabetic',
+  characters: TURKISH_CHARACTERS,
+  // Turkish ğ occurs inside generated names but never as an initial.
+  initialExcludedCharacters: new Set(['ğ']),
+  nameLengths: LATIN_NAME_LENGTHS,
+  vowels: TURKISH_VOWELS,
   excludedAfterVowel: new Set<string>(),
   excludedAfterConsonantVowel: new Set<string>(),
   specialFinalCharacter: null,
@@ -111,6 +127,7 @@ const LANGUAGE_RULES: Readonly<Record<string, LanguageRules | undefined>> =
   Object.freeze({
     en: ENGLISH_RULES,
     ru: RUSSIAN_RULES,
+    tr: TURKISH_RULES,
     ja: JAPANESE_RULES,
     ko: KOREAN_RULES,
     'zh-hans': SIMPLIFIED_CHINESE_RULES,
@@ -372,7 +389,10 @@ function generateAlphabeticAiNames(
       );
     }
 
-    nameCharacters[0] = nameCharacters[0].toUpperCase();
+    nameCharacters[0] =
+      rules === TURKISH_RULES
+        ? nameCharacters[0].toLocaleUpperCase('tr')
+        : nameCharacters[0].toUpperCase();
     const name = nameCharacters.join('');
 
     if (names.includes(name) || reservedNames.includes(name)) {
