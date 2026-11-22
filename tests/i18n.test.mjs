@@ -26,6 +26,15 @@ test('Turkish locale is registered with the complete catalog', () => {
   assert.equal(turkishData.items.length, englishData.items.length);
 });
 
+test('Turkish store badges are available to the home screen and install prompt', () => {
+  for (const store of ['app-store', 'google-play']) {
+    const badgePath = path.join('public', 'images', 'badges', store, 'tr.svg');
+    const badge = fs.readFileSync(badgePath, 'utf8');
+
+    assert.match(badge, /<svg\b/);
+  }
+});
+
 test('locale item catalogs match English except for translated names', () => {
   for (const localeFile of localeFiles) {
     const localeData = JSON.parse(fs.readFileSync(path.join(localeDirectory, localeFile), 'utf8'));
