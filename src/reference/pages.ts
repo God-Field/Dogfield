@@ -161,10 +161,10 @@ export class ItemRatesPanel extends AnimatedElement<HTMLDivElement> {
     let text: string | null;
     switch (item.category.index) {
       case 5:
-        text = `${texts.getReferenceText('appearanceRate')}: ${item.appearanceRate}%`;
+        text = `${texts.getReferenceText('appearanceRate')}: ${replaceFirst(texts.getReferenceText('ratePercent'), '{{rate}}', String(item.appearanceRate))}`;
         break;
       case 6:
-        text = item.guardianAttackRate > 0 ? `${texts.getReferenceText('guardianAttackRate')}: ${100 * item.guardianAttackRate / 20}%` : null;
+        text = item.guardianAttackRate > 0 ? `${texts.getReferenceText('guardianAttackRate')}: ${replaceFirst(texts.getReferenceText('ratePercent'), '{{rate}}', String(100 * item.guardianAttackRate / 20))}` : null;
         break;
       default:
         text = item.giftRate > 0 ? `${texts.getReferenceText('giftRate')}: ${item.giftRate}/${state.totalGiftRate}` : null;

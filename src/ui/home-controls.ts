@@ -295,7 +295,7 @@ export class CreditsPage extends AnimatedElement<HTMLDivElement> {
     art.domElement.style.top = '290px';
     this.domElement.append(art.domElement);
     let top = 410;
-    for (const key of ['soundMaterials', 'ptTranslation', 'zhHansTranslation', 'frTranslation', 'zhHantTranslation', 'koTranslation', 'ruTranslation', 'esTranslation']) {
+    for (const key of ['soundMaterials', 'ptTranslation', 'zhHansTranslation', 'frTranslation', 'zhHantTranslation', 'koTranslation', 'ruTranslation', 'esTranslation', 'trTranslation']) {
       const row = createSettingsDialog(texts.getSettingsText(key), texts.getSettingsText(key + 'Credit'));
       row.domElement.style.top = `${top}px`;
       this.domElement.append(row.domElement);
