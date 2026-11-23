@@ -245,8 +245,10 @@ export class FlashBattle {
 
   private illusionGroup(item: FlashItem): string {
     if (item.type === 'WEAPON') {
-      if (item.hitRate && !item.defenseKind) {
-        return 'WEAPON_WIDE';
+      if (item.hitRate) {
+        // The Flash client's Item.usage gives hit-rate weapons a usage group
+        // only when they have no defense kind.
+        return item.defenseKind ? '' : 'WEAPON_WIDE';
       }
       if (item.defenseKind === 'DFS' && !item.attribute) {
         return 'WEAPON_DFS';
