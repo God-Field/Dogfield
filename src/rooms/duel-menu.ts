@@ -1,5 +1,5 @@
 import {BASE_RATING} from '../domain/constants';
-import {firestoreDocument} from '../services/protocol';
+import {cloudFunction, firestoreDocument} from '../services/protocol';
 import {surfaceSize, radius, screen} from '../ui/theme';
 import {colors} from '../ui/palette';
 import {RANKING_ICON} from '../ui/icons';
@@ -10,8 +10,8 @@ import { createScreenBackground } from '../ui/assets';
 import { getApplication, state } from '../app/runtime';
 import { GameModeDuel } from '../domain/enums';
 import {sounds, playSound} from '../services/audio';
-import { loadFirestoreDocument } from '../services/firebase';
-import { replaceFirst, stringify } from '../shared/values';
+import { callCloudFunction, loadFirestoreDocument } from '../services/firebase';
+import { replaceFirst } from '../shared/values';
 import { createMessageBar } from '../ui/panels';
 export class DuelMenu extends DisposablePanel {
   constructor(public rankingButton: RankingButton, element: HTMLDivElement) {
@@ -117,7 +117,7 @@ export class DuelRankingRecords extends AnimatedElement<HTMLDivElement> {
 }
 export class DuelRecordSummary extends Card {
   async loadRecords(): Promise<null> {
-    const data = await loadFirestoreDocument(firestoreDocument.records(stringify(getApplication().userId))),
+    const data = await callCloudFunction(cloudFunction.getRecord, {mode: 'duel'}),
       ratingValue = data.get('rating'),
       countValue = data.get('gameCount');
     const rating = typeof ratingValue === 'number' && Number.isInteger(ratingValue) ? ratingValue : 0,

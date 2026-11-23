@@ -2,6 +2,7 @@
 export const cloudFunction = {
   updateAccount: 'update-account',
   createRoom: 'create-room',
+  getRecord: 'get-record',
 } as const;
 
 export const roomAction = {

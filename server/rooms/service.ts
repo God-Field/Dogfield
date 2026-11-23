@@ -1,4 +1,4 @@
-import type { Room, RoomPayload, Game } from '../types.ts';
+import type { Room, RoomPayload, Game, DuelRecord } from '../types.ts';
 import { Store } from '../store.ts';
 import { isDeepStrictEqual } from 'node:util';
 import { engine } from '../engine.ts';
@@ -194,6 +194,13 @@ export class RoomService {
     const payload = parseRoomPayload(action, input);
     if (action === 'update-account') {
       return null;
+    }
+    if (action === 'get-record') {
+      const record = this.store.get<DuelRecord>(`records/${userId}`);
+      return {
+        rating: typeof record?.rating === 'number' ? record.rating : 0,
+        gameCount: typeof record?.gameCount === 'number' ? record.gameCount : 0,
+      };
     }
     if (action === 'create-room') {
       return this.createRoom(userId, payload);

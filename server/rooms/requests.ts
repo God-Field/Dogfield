@@ -81,6 +81,10 @@ export function parseRoomPayload(action: string, input: unknown): RoomPayload {
   requireValue(
     typeof payload.mode === 'string' && supportedModes.has(payload.mode),
   );
+  if (action === 'get-record') {
+    requireValue(payload.mode === 'duel');
+    return payload;
+  }
   return payload;
 }
 
