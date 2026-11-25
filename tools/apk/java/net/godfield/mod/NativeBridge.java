@@ -96,6 +96,12 @@ public final class NativeBridge {
         if (!firebasePigeon && !firebaseEvents && !ads) {
             return false;
         }
+        // The stock app must use the official Firebase/API endpoints. Only
+        // custom server selections are routed through the local compatibility bridge.
+        LocalServer active = selectedServer;
+        if ((firebasePigeon || firebaseEvents) && (active == null || active.origin.isEmpty())) {
+            return false;
+        }
         if (engine != currentEngine) {
             currentEngine = engine;
             call(engine, "setSemanticsEnabled", new Class<?>[]{boolean.class}, true);

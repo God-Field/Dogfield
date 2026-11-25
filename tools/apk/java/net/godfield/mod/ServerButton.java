@@ -141,25 +141,23 @@ public final class ServerButton {
         int padding = dp(owner, 22);
         content.setPadding(padding, dp(owner, 8), padding, dp(owner, 4));
         TextView instructions = new TextView(theme);
-        instructions.setText("Enter your server address. The game reloads when you connect. Each server has its own account.");
+        instructions.setText("Leave blank to play on the official server.");
         content.addView(instructions);
         EditText address = new EditText(theme);
         address.setSingleLine(true);
         address.setTextSize(16);
         address.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-        address.setHint("http://192.168.1.20:8787");
+        address.setHint("Custom server address");
         address.setText(preferences.getString("url", ""));
         address.setSelectAllOnFocus(true);
         address.setContentDescription("Custom server URL");
         content.addView(address, new LinearLayout.LayoutParams(-1, dp(owner, 56)));
         TextView status = new TextView(theme);
         status.setTextSize(13);
-        status.setText(bridgeError == null
-            ? "On a phone, use your computer's local address. In an emulator, use http://10.0.2.2:8787."
-            : bridgeError);
+        status.setText(bridgeError == null ? "Emulator: http://10.0.2.2:8787" : bridgeError);
         content.addView(status);
         AlertDialog dialog = new AlertDialog.Builder(theme)
-            .setTitle("Custom server")
+            .setTitle("Server")
             .setView(content)
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Connect", null)
@@ -169,12 +167,20 @@ public final class ServerButton {
             connect.setOnClickListener(view -> {
                 final String origin;
                 try {
-                    origin = ServerUrl.normalize(address.getText().toString());
+                    String entered = address.getText().toString().trim();
+                    origin = entered.isEmpty() || "https://godfield.net/".equals(entered)
+                        ? "" : ServerUrl.normalize(entered);
                 } catch (IllegalArgumentException error) {
                     address.setError(error.getMessage());
                     return;
                 }
                 connect.setEnabled(false);
+                if (origin.isEmpty()) {
+                    preferences.edit().putString("url", "").commit();
+                    dialog.dismiss();
+                    owner.recreate();
+                    return;
+                }
                 status.setText("Checking server…");
                 new Thread(() -> {
                     try {

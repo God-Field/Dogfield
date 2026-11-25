@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Patch the 1.5.31 ARM64 XAPK without replacing its Flutter client."""
+"""Patch the 1.5.32 ARM64 XAPK without replacing its Flutter client."""
 
 import argparse
 import hashlib
@@ -245,8 +245,8 @@ def build(input_path, output_path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--setup', action='store_true', help='Download pinned Android build tools (requires network)')
-    parser.add_argument('--input', type=Path, default=ROOT / 'original/apk/God Field 1.5.31.xapk')
-    parser.add_argument('--output', type=Path, default=ROOT / 'public/apk/God-Field-1.5.31-modded.apk')
+    parser.add_argument('--input', type=Path, default=ROOT / 'original/apk/God Field 1.5.32.xapk')
+    parser.add_argument('--output', type=Path, default=ROOT / 'public/apk/God-Field-1.5.32-modded.apk')
     arguments = parser.parse_args()
     if arguments.setup:
         setup()

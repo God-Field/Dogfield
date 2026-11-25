@@ -3,6 +3,8 @@ dist/
 .local-server/
 .local-flash/
 .local-apk/
+original/apk/
+*.apk.idsig
 logs/
 artifacts/
 *.log
