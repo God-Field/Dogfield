@@ -270,7 +270,8 @@ export async function createServer({
   }
   if (!store.get('status/min_version')) {
     store.set('status/min_version', {
-      android: '1.5.31',
+      android: '1.5.27',
+      iOS: '1.5.27',
     });
   }
   return {

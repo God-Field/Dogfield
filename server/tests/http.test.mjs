@@ -27,7 +27,7 @@ test('native clients can read minimum-version status without widening document a
     const url = '/api/doc?path=status/min_version';
     const initial = await server.inject({ url, headers });
     assert.equal(initial.statusCode, 200);
-    assert.deepEqual(initial.json(), { android: '1.5.31' });
+    assert.deepEqual(initial.json(), { android: '1.5.27', iOS: '1.5.27' });
     const versionStatus = { android: '1.5.32' };
     store.set('status/min_version', versionStatus);
     const configured = await server.inject({ url, headers });
