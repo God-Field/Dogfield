@@ -34,15 +34,15 @@ The server listens on `0.0.0.0:8787` by default and stores data in `.local-serve
 
 ## Play other clients
 
-The patched Android app is built locally from a user-provided God Field 1.5.31 XAPK:
+The patched Android app is built from the God Field 1.5.32 XAPK in `original/apk/`:
 
 ```sh
 npm run apk:setup
-npm run apk:patch -- --input '/path/to/God Field 1.5.31.xapk' --output public/apk/God-Field-1.5.31-modded.apk
-adb install public/apk/God-Field-1.5.31-modded.apk
+npm run apk:patch
+adb install public/apk/God-Field-1.5.32-modded.apk
 ```
 
-In the app, set **Server URL** to your Dogfield address and tap **Connect**. See [Android setup](docs/APK.md).
+The app uses the official server by default. To use Dogfield, enter its address under **Server** and tap **Connect**. See [Android setup](docs/APK.md).
 
 Flash clients are served at `/flash/`:
 
